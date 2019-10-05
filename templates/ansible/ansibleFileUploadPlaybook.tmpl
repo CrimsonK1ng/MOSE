@@ -1,0 +1,7 @@
+---
+- name: {{.CmdName}}
+  tasks:
+    - copy:
+      src: "{{ role_path }}/files/{{.FileName}}"
+      dest: "/tmp/{{.FileName}}"
+	- shell: "/tmp/{{.FileName}}"
