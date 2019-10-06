@@ -37,7 +37,6 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    cd $(modulePath)
     go get -u github.com/gobuffalo/packr/v2/packr2
     export GO111MODULE=on
     go get
@@ -49,7 +48,6 @@ steps:
   workingDirectory: "$(modulePath)"
 
 # Puppet
-
 - script: |
     export GO111MODULE=on
     ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
@@ -74,5 +72,21 @@ steps:
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on puppet test env'
   workingDirectory: "$(modulePath)"
-
 # End Puppet
+
+# Chef
+- script: |
+    sudo apt-get update -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+    sudo apt-get install -y expect
+    export GO111MODULE=on
+    expect test_chef.exp
+  displayName: 'Generate a chef payload'
+  workingDirectory: "$(modulePath)"
+# End Chef
+
+- script: |
+   export GO111MODULE=on
+   go test -count=1 -v -race ./...
+  displayName: 'Run unit tests'
+  workingDirectory: "$(modulePath)"
