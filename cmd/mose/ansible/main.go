@@ -221,7 +221,72 @@ func generatePlaybook(playbookLoc string, cmd string) bool {
 	return true
 }
 
-func getAnsibleSecrets() {
+func getAnsibleSecrets(siteLoc string, ansibleCfgs []string) {
+	found, ansibleVault := moseutils.FindBin("ansible-vault", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	if !found {
+		log.Printf("Ansible Vault not found, no need to find secrets")
+		return
+	}
+
+	var vaultPasswords []string
+	for _, cfg := range ansibleCfgs {
+		reg := regexp.MustCompile(`(?ms)vault_password_file\s*?=\s*?(.*?)\n`)
+		matches := moseutils.GrepFile(cfg, reg)
+		if len(matches) > 0 {
+			for _, match := range matches {
+				submatch := reg.FindStringSubmatch(match)
+				if len(submatch) > 0 {
+					vaultPasswords = append(vaultPasswords, submatch[1])
+				}
+			}
+		}
+	}
+
+	var morePasswords []string
+	for _, pass := range vaultPasswords {
+		if strings.Contains(pass, "~") {
+			fileList, _ := moseutils.FindFiles([]string{"/home"}, []string{}, []string{filepath.Base(pass)}, []string{})
+			morePasswords = append(morePasswords, fileList...)
+		}
+	}
+	if len(morePasswords) > 0 {
+		vaultPasswords = append(vaultPasswords, morePasswords...)
+	}
+	log.Printf("%v", vaultPasswords)
+
+	sitePathLoc := getSiteLoc(siteLoc)
+	fileList, _ := moseutils.FindFiles([]string{sitePathLoc}, []string{".yml"}, []string{"vault"}, []string{})
+
+	if len(fileList) == 0 {
+		log.Println("Unable to find any yml files, skipping...")
+		return
+	}
+
+	for _, k := range fileList {
+		reg := regexp.MustCompile(`(?ms)VAULT`)
+		matches := moseutils.GrepFile(k, reg)
+		if len(matches) > 0 {
+			if len(vaultPasswords) > 0 {
+				for _, pass := range vaultPasswords {
+					res, err := utils.RunCommand(ansibleVault, "--vault-password-file", pass, "view", k)
+					if err != nil {
+						log.Printf("Error running command: %s --vault-password-file %s view %s %v", ansibleVault, pass, k, err)
+						continue
+					}
+					msg("%s", res)
+				}
+			} else {
+				res, err := utils.RunCommand(ansibleVault, "view", k)
+				if err != nil {
+					log.Printf("Error running command: %s view %s %v", ansibleVault, k, err)
+					continue
+				}
+				msg("%s", res)
+			}
+		}
+
+	}
+
 	return
 }
 
@@ -231,7 +296,7 @@ func main() {
 	// gonna assume not root then we screwed
 	utils.CheckRoot()
 
-	_ = findAnsibleConfig()
+	ansibleCfgs := findAnsibleConfig()
 
 	found, _ := moseutils.FindBin("ansible", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
@@ -247,5 +312,5 @@ func main() {
 	createRole(siteLoc, ansibleRole, bdCmd)
 
 	log.Println("Attempting to find secrets stored with Ansible-Vault")
-	getAnsibleSecrets()
+	getAnsibleSecrets(siteLoc, ansibleCfgs)
 }
