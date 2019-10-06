@@ -1,6 +1,4 @@
 ---
 - name: {{.CmdName}}
   become: true
-  command:
-    shell: {{.Cmd}}
-    owner: root
+  shell: {{.Cmd}}
