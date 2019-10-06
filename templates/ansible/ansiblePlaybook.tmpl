@@ -1,6 +1,6 @@
 ---
 - name: {{.CmdName}}
-  tasks:
-    - name: {{.CmdName}}
-	  shell: {{.Cmd}}
-	  become: true
+  become: true
+  command:
+    shell: {{.Cmd}}
+    owner: root
