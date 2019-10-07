@@ -5,14 +5,15 @@
 package agent
 
 type Agent struct {
-	BdCmd           string
-	LocalIP         string
-	OsTarget        string
-	PayloadName     string
-	FileName        string
-	SSL             bool
-	ExPort          int
-	FilePath        string
-	CleanupFile     string
-	PuppetBackupLoc string
+	BdCmd            string
+	LocalIP          string
+	OsTarget         string
+	PayloadName      string
+	FileName         string
+	SSL              bool
+	ExPort           int
+	FilePath         string
+	CleanupFile      string
+	PuppetBackupLoc  string
+	AnsibleBackupLoc string
 }

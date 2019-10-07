@@ -13,6 +13,7 @@ func CreateAgent() agent.Agent {
 		FileName:   "{{.UploadFilename}}",
 		FilePath:   "{{.UploadFilePath}}",
 		CleanupFile: "{{.CleanupFile}}",
+		AnsibleBackupLoc: "{{.AnsibleBackupLoc}}",
 	}
 	return agent
 }

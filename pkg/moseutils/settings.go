@@ -22,6 +22,7 @@ type Settings struct {
 	UploadFilePath    string
 	CleanupFile       string
 	PuppetBackupLoc   string
+	AnsibleBackupLoc  string
 	RemoteHosts       string
 	ContainerName     string
 }

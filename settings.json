@@ -10,6 +10,7 @@
 	"uploadFilePath": "/root/.definitelynotevil",
 	"cleanupFile" : "/root/.cleanup",
 	"puppetBackupLoc" : "",
+	"ansibleBackupLoc" : "",
 	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
 	"remoteHosts" : ""
 }

@@ -54,27 +54,29 @@ var (
 	rhost             string
 	cleanupFile       string
 	puppetBackupLoc   string
+	ansibleBackupLoc  string
 	containerName     string
 )
 
 type cliArgs struct {
-	BdCmd           string
-	LocalIP         string
-	KeyName         string
-	NodeName        string
-	OrgName         string
-	OsTarget        string
-	PayloadName     string
-	TargetIP        string
-	UserOrgName     string
-	ValidKey        string
-	WebSrvPort      string
-	UploadFilename  string
-	ServeSSL        bool
-	ExfilPort       int
-	UploadFilePath  string
-	CleanupFile     string
-	PuppetBackupLoc string
+	BdCmd            string
+	LocalIP          string
+	KeyName          string
+	NodeName         string
+	OrgName          string
+	OsTarget         string
+	PayloadName      string
+	TargetIP         string
+	UserOrgName      string
+	ValidKey         string
+	WebSrvPort       string
+	UploadFilename   string
+	ServeSSL         bool
+	ExfilPort        int
+	UploadFilePath   string
+	CleanupFile      string
+	PuppetBackupLoc  string
+	AnsibleBackupLoc string
 }
 
 // init specifies the input parameters that mose can take.
@@ -119,6 +121,7 @@ func initSettings(file string) {
 	targetIP = settings.TargetIP
 	cleanupFile = settings.CleanupFile
 	puppetBackupLoc = settings.PuppetBackupLoc
+	ansibleBackupLoc = settings.PuppetBackupLoc
 	containerName = settings.ContainerName
 
 	if rhost == "" {
@@ -149,22 +152,23 @@ func validateInput() bool {
 
 func generateParams() {
 	cliArgs := cliArgs{
-		BdCmd:           cmd,
-		LocalIP:         localIP,
-		OsTarget:        osTarget,
-		PayloadName:     payloadName,
-		NodeName:        chefNodeName,
-		KeyName:         "",
-		OrgName:         targetOrgName,
-		UserOrgName:     attackOrgName,
-		ValidKey:        filepath.Base(chefValidationKey),
-		TargetIP:        targetIP,
-		UploadFilename:  "",
-		ServeSSL:        serveSSL,
-		ExfilPort:       exfilPort,
-		UploadFilePath:  cmdUploadPath,
-		CleanupFile:     cleanupFile,
-		PuppetBackupLoc: puppetBackupLoc,
+		BdCmd:            cmd,
+		LocalIP:          localIP,
+		OsTarget:         osTarget,
+		PayloadName:      payloadName,
+		NodeName:         chefNodeName,
+		KeyName:          "",
+		OrgName:          targetOrgName,
+		UserOrgName:      attackOrgName,
+		ValidKey:         filepath.Base(chefValidationKey),
+		TargetIP:         targetIP,
+		UploadFilename:   "",
+		ServeSSL:         serveSSL,
+		ExfilPort:        exfilPort,
+		UploadFilePath:   cmdUploadPath,
+		CleanupFile:      cleanupFile,
+		PuppetBackupLoc:  puppetBackupLoc,
+		AnsibleBackupLoc: ansibleBackupLoc,
 	}
 	if chefClientKey != "" {
 		cliArgs.KeyName = filepath.Base(chefClientKey)
