@@ -22,10 +22,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 type Command struct {

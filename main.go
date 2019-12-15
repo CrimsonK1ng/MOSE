@@ -16,10 +16,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 var (
@@ -56,6 +56,7 @@ var (
 	cleanupFile       string
 	puppetBackupLoc   string
 	ansibleBackupLoc  string
+	saltBackupLoc     string
 	containerName     string
 )
 
@@ -78,6 +79,7 @@ type cliArgs struct {
 	CleanupFile      string
 	PuppetBackupLoc  string
 	AnsibleBackupLoc string
+	SaltBackupLoc    string
 }
 
 // init specifies the input parameters that mose can take.
@@ -122,7 +124,8 @@ func initSettings(file string) {
 	targetIP = settings.TargetIP
 	cleanupFile = settings.CleanupFile
 	puppetBackupLoc = settings.PuppetBackupLoc
-	ansibleBackupLoc = settings.PuppetBackupLoc
+	ansibleBackupLoc = settings.AnsibleBackupLoc
+	saltBackupLoc = settings.SaltBackupLoc
 	containerName = settings.ContainerName
 
 	if rhost == "" {
@@ -170,6 +173,7 @@ func generateParams() {
 		CleanupFile:      cleanupFile,
 		PuppetBackupLoc:  puppetBackupLoc,
 		AnsibleBackupLoc: ansibleBackupLoc,
+		SaltBackupLoc:    saltBackupLoc,
 	}
 	if chefClientKey != "" {
 		cliArgs.KeyName = filepath.Base(chefClientKey)

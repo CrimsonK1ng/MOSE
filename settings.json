@@ -11,6 +11,7 @@
 	"cleanupFile" : "/root/.cleanup",
 	"puppetBackupLoc" : "",
 	"ansibleBackupLoc" : "",
+	"saltBackupLoc" : "",
 	"containerName" : "MOSE_DESTROYER_OF_WORLDS",
 	"remoteHosts" : ""
 }

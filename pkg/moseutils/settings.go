@@ -23,6 +23,7 @@ type Settings struct {
 	CleanupFile       string
 	PuppetBackupLoc   string
 	AnsibleBackupLoc  string
+	SaltBackupLoc     string
 	RemoteHosts       string
 	ContainerName     string
 }

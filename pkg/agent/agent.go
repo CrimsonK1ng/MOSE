@@ -16,4 +16,5 @@ type Agent struct {
 	CleanupFile      string
 	PuppetBackupLoc  string
 	AnsibleBackupLoc string
+	SaltBackupLoc    string
 }

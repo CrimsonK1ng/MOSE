@@ -11,10 +11,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/l50/goutils"
-	"github.com/l50/mose/pkg/moseutils"
 )
 
 type Command struct {
