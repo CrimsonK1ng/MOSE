@@ -121,21 +121,22 @@ steps:
 # Salt 
 - script: |
     export GO111MODULE=on
-    ./MOSE -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t salt -f $(modulePath)/payloads/salt-linux
+    ./MOSE -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t salt -f "$(modulePath)/payloads/salt-linux"
   displayName: 'Generate a salt payload'
   workingDirectory: "$(modulePath)"
 
 - script: | 
     git clone https://github.com/master-of-servers/salt-test-lab.git
     cd salt-test-lab && cd basic
-    make run
+    docker-compose up -d --build
+    sleep 60 
   displayName: 'Build and configure salt test environment'
   workingDirectory: "$(modulePath)"
 
 - script: | 
-    docker cp $(modulePath)/payloads/salt-linux salt-master:/salt-linux
+    docker cp "$(modulePath)/payloads/salt-linux" salt-master:/salt-linux
     docker exec -i salt-master /bin/bash -c "echo 'Y' | /salt-linux"
-    docker exec -i salt-master /bin/bash -c "docker exec -it salt-master salt '*' state.apply my_cmd/my_cmd"
+    docker exec -i salt-master /bin/bash -c "salt-master salt '*' state.apply my_cmd/my_cmd"
     docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on puppet test environment'
   workingDirectory: "$(modulePath)"
