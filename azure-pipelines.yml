@@ -134,11 +134,10 @@ steps:
   workingDirectory: "$(modulePath)"
 
 - script: | 
-    echo "$(modulePath"
+    echo "$(modulePath)"
     docker cp '$(modulePath)/payloads/salt-linux' salt-master:/salt-linux
     docker exec -i salt-master /bin/bash -c "echo 'Y' | /salt-linux"
     docker exec -i salt-master /bin/bash -c "salt-master salt '*' state.apply my_cmd/my_cmd"
-    docker exec -i basic-puppetagent /bin/bash -c "cat /tmp/test.txt"
   displayName: 'Run MOSE generated payload on puppet test environment'
   workingDirectory: "$(modulePath)"
 # End Salt
