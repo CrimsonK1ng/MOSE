@@ -1,10 +1,10 @@
 # MOSE (Master Of SErvers)
 [![Dc27Badge](https://img.shields.io/badge/DEF%20CON-27-green)](https://defcon.org/html/defcon-27/dc-27-speakers.html#Grace)
-[![Go Report Card](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)](https://goreportcard.com/badge/github.com/master-of-servers/MOSE)
-[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/MOSE/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/master-of-servers/mose)](https://goreportcard.com/report/github.com/master-of-servers/mose)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/master-of-servers/mose/blob/master/LICENSE)
 [![Build Status](https://dev.azure.com/jaysonegrace/MOSE/_apis/build/status/master-of-servers.MOSE?branchName=master)](https://dev.azure.com/jaysonegrace/MOSE/_build/latest?definitionId=5&branchName=master)
 
-> Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+> Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 Under the terms of Contract DE-NA0003525 with NTESS, 
 the U.S. Government retains certain rights in this software
 
@@ -34,36 +34,36 @@ make build
 ```
 Usage of ./mose [options]:
   -a string
-        Architecture that the target CM tool is running on. (default "amd64")
+        Architecture that the target CM tool is running on (default "amd64")
   -c string
-        Command to run on the targets.
+        Command to run on the targets
+  -d    Display debug output
   -ep int
-        Port used to exfil data from chef server (default 443 with ssl, 9090 without) (default 443
+        Port used to exfil data from chef server (default 443 with ssl, 9090 without) (default 443)
   -f string
-        Store binary at <filepath>
+        Output binary locally at <filepath>
   -fu string
         File upload option
   -l string
-        Local IP Address.
+        Local IP Address
   -m string
         Name for backdoor payload (default "my_cmd")
-  -ns
-        Disable serving of payload
   -o string
-        Operating system that the target CM tool is on. (default "linux")
+        Operating system that the target CM tool is on (default "linux")
   -p int
         Port used to serve payloads on (default 443 with ssl, 8090 without) (default 443)
-  -rhost string
-        Set RHOST for /etc/hosts of docker container (format is hostname:ip)
+  -r string
+        Set the remote host for /etc/hosts in the chef workstation container (format is hostname:ip)
+  -rfp string
+        Remote file path to upload a script to (used in conjunction with -fu) (default "/root/.definitelynotevil")
   -s string
-        Json file to load for mose (default "settings.json")
+        JSON file to load for MOSE (default "settings.json")
   -ssl
         Serve payload over TLS
   -t string
-        Configuration management tool to target. (default "puppet")
+        Configuration management tool to target (default "puppet")
   -tts int
         Number of seconds to serve the payload (default 60)
-  -v    Display verbose output
   ```
 
 ### TLS Certificates

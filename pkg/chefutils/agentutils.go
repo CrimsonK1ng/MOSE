@@ -1,8 +1,8 @@
-// Copyright 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
 
-package moseutils
+package chefutils
 
 import (
 	"bufio"
@@ -10,14 +10,18 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
 )
 
 // TargetAgents allows a user to select specific chef agents, or return them all as a []string
 func TargetAgents(nodes []string, osTarget string) ([]string, error) {
 	var targets []string
-	if ans, err := AskUserQuestion("Do you want to target specific chef agents?", osTarget); ans && err == nil {
+	if ans, err := moseutils.AskUserQuestion("Do you want to target specific chef agents? ", osTarget); ans && err == nil {
 		reader := bufio.NewReader(os.Stdin)
+		// Print the first discovered node (done for formatting purposes)
 		fmt.Printf("%s", nodes[0])
+		// Print the rest of the discovered nodes
 		for _, node := range nodes[1:] {
 			fmt.Printf(",%s", node)
 		}

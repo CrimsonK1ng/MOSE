@@ -29,19 +29,18 @@ type Metadata struct {
 
 var (
 	a                = CreateAgent()
-	bdCmd            = a.BdCmd
+	bdCmd            = a.Cmd
+	debug            = a.Debug
 	errmsg           = color.Red
 	localIP          = a.LocalIP
 	msg              = color.Green
 	osTarget         = a.OsTarget
 	saltState        = a.PayloadName
 	uploadFileName   = a.FileName
-	serveSSL         = a.SSL
-	exfilPort        = a.ExPort
 	suppliedFilename string
 	keys             []string
 	inspect          bool
-	uploadFilePath   = a.FilePath
+	uploadFilePath   = a.RemoteUploadFilePath
 	cleanup          bool
 	cleanupFile      = a.CleanupFile
 	saltBackupLoc    = a.SaltBackupLoc
@@ -192,7 +191,7 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 }
 
 func getPillarSecrets(binLoc string) {
-	found, binLoc := moseutils.FindBin("salt-call", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, binLoc := moseutils.FindFile("salt-call", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
 		log.Fatalf("salt-call binary not found, exiting...")
 	}
@@ -262,11 +261,11 @@ func main() {
 	// 		moseutils.TrackChanges(cleanupFile, uploadFilePath)
 	// 	}
 
-	found, binLoc := moseutils.FindBin("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, binLoc := moseutils.FindFile("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
 		log.Fatalf("salt binary not found, exiting...")
 	}
-	found, topLoc := moseutils.FindBin("top.sls", []string{"/srv/salt"})
+	found, topLoc := moseutils.FindFile("top.sls", []string{"/srv/salt"})
 	if !found {
 		log.Fatalf("top.sls not found, exiting...")
 	}

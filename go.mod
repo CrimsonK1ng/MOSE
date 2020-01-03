@@ -24,13 +24,13 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
-	github.com/rogpeppe/go-internal v1.5.0 // indirect
+	github.com/rogpeppe/go-internal v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
-	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
+	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876 // indirect
+	golang.org/x/sys v0.0.0-20200102141924-c96a22e43c9c // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20191213221258-04c2e8eff935 // indirect
+	golang.org/x/tools v0.0.0-20200102200121-6de373a2766c // indirect
 	google.golang.org/grpc v1.21.1 // indirect
 	gopkg.in/src-d/go-git.v4 v4.12.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
