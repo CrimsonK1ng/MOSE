@@ -49,7 +49,7 @@ steps:
 # Puppet
 - script: |
     export GO111MODULE=on
-    ./MOSE -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
   displayName: 'Generate a puppet payload'
   workingDirectory: "$(modulePath)"
 
@@ -145,29 +145,6 @@ steps:
   displayName: 'Run MOSE generated payload on workstation in chef test environment'
   workingDirectory: "$(modulePath)"
 
-# Salt 
-- script: |
-    export GO111MODULE=on
-    ./MOSE -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t salt -f "$(modulePath)/payloads/salt-linux"
-  displayName: 'Generate a salt payload'
-  workingDirectory: "$(modulePath)"
-
-- script: | 
-    git clone https://github.com/master-of-servers/salt-test-lab.git
-    cd salt-test-lab && cd basic
-    docker-compose up -d --build
-    sleep 60 
-  displayName: 'Build and configure salt test environment'
-  workingDirectory: "$(modulePath)"
-
-- script: | 
-    docker cp "$(modulePath)/payloads/salt-linux" salt-master:/salt-linux
-    docker exec -i salt-master /bin/bash -c "echo 'Y' | /salt-linux"
-    docker exec -i salt-master /bin/bash -c "salt-master salt '*' state.apply my_cmd/my_cmd"
-  displayName: 'Run MOSE generated payload on puppet test environment'
-  workingDirectory: "$(modulePath)"
-# End Salt
-
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
@@ -190,6 +167,21 @@ steps:
   displayName: 'Run MOSE generated file upload payload on workstation in chef test environment'
   workingDirectory: "$(modulePath)"
 # End Chef
+
+# Salt 
+- script: |
+    git clone https://github.com/master-of-servers/salt-test-lab.git
+    cd salt-test-lab && cd basic
+    docker-compose up -d --build
+    sleep 60
+    # Fix pillar issue
+    docker exec -it salt-master /bin/bash -c "salt '*' saltutil.refresh_pillar"
+    # Enroll minion with salt master
+    docker exec -i salt-master /bin/bash -c "salt '*' state.apply hello"
+    docker exec -i salt-master /bin/bash  -c "salt '*' pillar.items"
+  displayName: 'Build and configure salt test environment'
+  workingDirectory: "$(modulePath)"
+# End Salt
 
 # - script: |
 #    export GO111MODULE=on
