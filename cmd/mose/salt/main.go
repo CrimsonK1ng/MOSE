@@ -192,9 +192,10 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 }
 
 func getPillarSecrets(binLoc string) {
-	res, err := utils.RunCommand("salt", "*", "pillar.items")
+	//Running command salt '*' pillar.items
+	res, err := utils.RunCommand(binLoc, "*", "pillar.items")
 	if err != nil {
-		log.Printf("Error running command: %s '*' pillar.items", res)
+		log.Printf("Error running command: %s '*' pillar.items", binLoc)
 		log.Fatal(err)
 	}
 	msg("%s", res)
