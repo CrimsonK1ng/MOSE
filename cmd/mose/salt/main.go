@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"

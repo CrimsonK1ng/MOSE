@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/CrimsonK1ng/MOSE/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"io"
 	"io/ioutil"
 	"log"
