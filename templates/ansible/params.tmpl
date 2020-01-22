@@ -1,20 +1,20 @@
 package main
 
 import (
-	"github.com/CrimsonK1ng/mose/pkg/agent"
+	"github.com/master-of-servers/mose/pkg/agent"
 )
 
 func CreateAgent() agent.Agent {
 	agent := agent.Agent{
+		AnsibleBackupLoc: "{{.AnsibleBackupLoc}}",
+		CleanupFile: "{{.CleanupFile}}",
 		Cmd:      "{{.Cmd}}",
 		Debug:     {{.Debug}},
+		FileName:   "{{.FileUpload}}",
 		LocalIP:    "{{.LocalIP}}",
 		OsTarget:   "{{.OSTarget}}",
-		PayloadName:"{{.PayloadName}}",
-		FileName:   "{{.FileUpload}}",
+		PayloadName: "{{.PayloadName}}",
 		RemoteUploadFilePath: "{{.RemoteUploadFilePath}}",
-		CleanupFile: "{{.CleanupFile}}",
-		AnsibleBackupLoc: "{{.AnsibleBackupLoc}}",
 	}
 	return agent
 }
