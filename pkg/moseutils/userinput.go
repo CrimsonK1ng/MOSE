@@ -85,6 +85,14 @@ func processInput() {
 	if Cli.Rhost == "" {
 		Cli.Rhost = JSONSettings.RemoteHost
 	}
+	//Generate full path from relative path if absolute path is not given
+	path, err := filepath.Abs(Cli.FilePath)
+
+	if err != nil {
+		log.Fatalf("Error generating absolute path from %s", Cli.FilePath)
+	}
+	Cli.FilePath = path
+
 	if Cli.FileUpload != "" {
 		Cli.FileUpload = filepath.Base(Cli.FileUpload)
 	}

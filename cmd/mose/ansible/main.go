@@ -306,8 +306,8 @@ func generatePlaybooks() {
 }
 
 // TODO: this
-func backdoorSiteFile(siteLoc string) {
-	bytes, err := moseutils.ReadBytesFromFile(siteLoc)
+func backdoorSiteFile() {
+	bytes, err := moseutils.ReadBytesFromFile(files.siteFile)
 
 	if err != nil {
 		log.Fatal(err)
@@ -341,11 +341,11 @@ func backdoorSiteFile(siteLoc string) {
 		log.Fatal(err)
 	}
 
-	err = moseutils.WriteFile(siteLoc, marshalled, 0644)
+	err = moseutils.WriteFile(files.siteFile, marshalled, 0644)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	log.Printf("%s successfully create", siteLoc)
+	log.Printf("%s successfully create", files.siteFile)
 	// find the hosts: all section
 	// if it doesn't exist, create it
 	// make sure to put the backdoor at the bottom of roles
@@ -412,7 +412,7 @@ func main() {
 	// TODO: Need to implement message for file uploads
 	moseutils.Msg("Backdooring %s to run %s on all managed systems, please wait...", files.siteFile, a.Cmd)
 	// TODO: implement this
-	backdoorSiteFile(files.siteFile)
+	backdoorSiteFile()
 
 	log.Fatal("DIE")
 

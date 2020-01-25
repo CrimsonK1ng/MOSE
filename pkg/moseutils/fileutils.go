@@ -90,6 +90,7 @@ func File2lines(filePath string) ([]string, error) {
 	return LinesFromReader(f)
 }
 
+// ReadBytesFromFile returns all data from file as byte array
 func ReadBytesFromFile(filePath string) ([]byte, error) {
 	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -98,6 +99,7 @@ func ReadBytesFromFile(filePath string) ([]byte, error) {
 	return b, nil
 }
 
+// WriteFile writes a byte array to the file designated by filePath with the permissions provided by perm
 func WriteFile(filePath string, data []byte, perm os.FileMode) error {
 	err := ioutil.WriteFile(filePath, data, 0644)
 	if err != nil {
