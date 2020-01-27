@@ -8,8 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/CrimsonK1ng/mose/pkg/moseutils"
+	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
-	"gopkg.in/yaml.v2"
 	"log"
 	"os"
 	"path/filepath"
@@ -33,10 +33,11 @@ type ansibleFiles struct {
 }
 
 type ansible []struct {
-	Name   string   `yaml:"name"`
-	Hosts  string   `yaml:"hosts"`
-	Become bool     `yaml:"become"`
-	Roles  []string `yaml:"roles,flow"`
+	Name   string        `json:"name,omitempty"`
+	Hosts  string        `json:"hosts,omitempty"`
+	Become bool          `json:"become,omitempty"`
+	Roles  []string      `json:"roles,flow,omitempty"`
+	Tasks  []interface{} `json:"tasks,omitempty"`
 }
 
 var (
@@ -353,6 +354,7 @@ func backdoorSiteFile() {
 				"all",
 				true,
 				[]string{ansibleRole},
+				nil,
 			}}
 			unmarshalled = append(unmarshalled, newItem[0])
 			writeYamlToSite(unmarshalled)

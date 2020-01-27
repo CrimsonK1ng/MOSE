@@ -3,6 +3,7 @@ module github.com/CrimsonK1ng/mose
 require (
 	github.com/docker/docker v1.13.1
 	github.com/fatih/color v1.7.0
+	github.com/ghodss/yaml v1.0.0
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/l50/goutils v0.0.0-20190618185127-76c085e83296
@@ -12,7 +13,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
-	golang.org/x/tools v0.0.0-20200124220429-8fe064f891f2 // indirect
+	golang.org/x/tools v0.0.0-20200125223703-d33eef8e6825 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
 
