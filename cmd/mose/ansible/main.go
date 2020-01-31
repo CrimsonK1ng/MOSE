@@ -164,7 +164,7 @@ func getHostFileFromCfg() (bool, string) {
 		matched, _ := regexp.MatchString(`^inventory.*`, line)
 		if matched {
 			if debug {
-				log.Printf("Found inventory specified in ansible.cfg: %v", files.hostFiles)
+				log.Printf("Found inventory specified in ansible.cfg: %v", files.cfgFile)
 			}
 			path, err := filepath.Abs(filepath.Join(filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1])))
 			if err != nil {
