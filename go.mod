@@ -4,6 +4,7 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/gobuffalo/packd v1.0.0 // indirect
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/l50/goutils v0.0.0-20190618185127-76c085e83296
@@ -13,7 +14,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d // indirect
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
-	golang.org/x/tools v0.0.0-20200131143746-097c1f2eed26 // indirect
+	golang.org/x/tools v0.0.0-20200131183150-d6d1b0d85358 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
 
