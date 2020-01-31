@@ -20,8 +20,10 @@ import (
 )
 
 type command struct {
-	Cmd     string
-	CmdName string
+	Cmd      string
+	CmdName  string
+	FileName string
+	FilePath string
 }
 
 type ansibleFiles struct {
@@ -216,14 +218,32 @@ func getManagedSystems() []string {
 
 func createPlaybookDirs(playbookDir string, ansibleCommand command) {
 	var err error
-	if uploadFileName != "" {
-		err = os.MkdirAll(filepath.Join(playbookDir, ansibleCommand.CmdName, "tasks", "files"), os.ModePerm)
-	} else {
-		err = os.MkdirAll(filepath.Join(playbookDir, ansibleCommand.CmdName, "tasks"), os.ModePerm)
-	}
+	var fileDir string
+	err = os.MkdirAll(filepath.Join(playbookDir, ansibleCommand.CmdName, "tasks"), os.ModePerm)
 
 	if err != nil {
 		log.Fatalf("Error creating the %s playbook directory: %v", playbookDir, err)
+	}
+
+	if uploadFileName != "" {
+		fileDir = filepath.Join(playbookDir, ansibleCommand.CmdName, "files")
+		err = os.MkdirAll(fileDir, os.ModePerm)
+
+		if err != nil {
+			log.Fatalf("Error creating the %s playbook directory: %v", fileDir, err)
+		}
+
+		_, err := moseutils.TrackChanges(cleanupFile, uploadFilePath)
+
+		if err != nil {
+			log.Println("Error tracking changes: ", err)
+		}
+
+		moseutils.CpFile(uploadFilePath, filepath.Join(fileDir, filepath.Base(uploadFileName)))
+		if err := os.Chmod(filepath.Join(fileDir, filepath.Base(uploadFileName)), 0644); err != nil {
+			log.Fatal(err)
+		}
+		moseutils.Msg("Successfully copied and chmod file %s", filepath.Join(fileDir, filepath.Base(uploadFileName)))
 	}
 }
 
@@ -249,10 +269,10 @@ func backupSiteFile() {
 
 func generatePlaybooks() {
 	ansibleCommand := command{
-		CmdName: a.PayloadName,
-		Cmd:     a.Cmd,
-		// FileName:  uploadFileName,
-		// FilePath:  uploadFilePath,
+		CmdName:  a.PayloadName,
+		Cmd:      a.Cmd,
+		FileName: uploadFileName,
+		FilePath: uploadFilePath,
 	}
 	for _, playbookDir := range files.playbookDirs {
 		var s string
@@ -268,17 +288,10 @@ func generatePlaybooks() {
 
 		// TODO: Implement this
 		if uploadFileName != "" {
-			s, err = box.FindString("ansibleFileUploadModule.tmpl")
+			s, err = box.FindString("ansibleFileUploadPlaybook.tmpl")
 
 			if err != nil {
 				log.Fatalf("Error reading the template to create a playbook: %v", err)
-			}
-
-			// Create directory to hold the uploaded file
-			err = os.MkdirAll(filepath.Join(playbookDir, ansibleCommand.CmdName, "vars"), os.ModePerm)
-
-			if err != nil {
-				log.Fatalf("Error creating the %s playbook directory: %v", playbookDir, err)
 			}
 		}
 
@@ -471,7 +484,11 @@ func getVaultPassFromCfg() (bool, string) {
 			if debug {
 				log.Printf("Found vault_password_file specified in ansible.cfg: %v", files.cfgFile)
 			}
-			return true, strings.TrimSpace(strings.SplitAfter(line, "=")[1])
+			path, err := filepath.Abs(filepath.Join(filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1])))
+			if err != nil {
+				log.Fatalf("Could not make absolute path from %v, %v", filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1]))
+			}
+			return true, path
 		}
 	}
 	return false, ""
@@ -492,13 +509,18 @@ func writeYamlToSite(siteYaml ansible) {
 
 func main() {
 	// TODO: Implement cleanup
-	// if cleanup {
-	// 	doCleanup(files.siteFile)
-	// }
+	if cleanup {
+		doCleanup(files.siteFile)
+	}
 
-	// if uploadFilePath != "" {
-	// 	moseutils.TrackChanges(cleanupFile, uploadFilePath)
-	// }
+	if uploadFilePath != "" {
+		moseutils.CpFile(uploadFileName, uploadFilePath)
+		_, err := moseutils.TrackChanges(cleanupFile, uploadFileName)
+
+		if err != nil {
+			log.Println("Error tracking changes: ", err)
+		}
+	}
 
 	// Find site.yml
 	files.siteFile = getSiteFile()

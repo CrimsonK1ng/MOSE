@@ -162,8 +162,10 @@ func main() {
 
 	// Output to the payloads directory if -f is specified
 	if UserInput.FileUpload != "" {
-		targetBin := filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
-		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), targetBin}
+		if UserInput.FilePath == "" {
+			UserInput.FilePath = filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
+		}
+		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), UserInput.FilePath}
 		moseutils.Info("Compressing files %v into payloads/files.tar", files)
 		moseutils.TarFiles(files, "payloads/files.tar")
 	}
