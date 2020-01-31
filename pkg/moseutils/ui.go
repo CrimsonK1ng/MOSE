@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -34,6 +35,38 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 			return false, nil
 		} else {
 			ErrMsg("Invalid input")
+		}
+	}
+}
+
+func AskUserQuestionComma(question string, osTarget string) (map[int]bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		var err error
+		fmt.Println(question + "(Provide answer as comma seperated)")
+		text, _ := reader.ReadString('\n')
+		if strings.Contains(text, "q") {
+			return nil, errors.New("Quit")
+		} else {
+			if osTarget == "windows" {
+				text = text[:len(text)-2]
+			} else {
+				text = text[:len(text)-1]
+			}
+			strnums := strings.Split(text, ",")
+			nums := make(map[int]bool)
+			for _, n := range strnums {
+				num, e := strconv.Atoi(n)
+				if e != nil {
+					fmt.Println("Number provided is not an integer, ...")
+					err = e
+				} else {
+					nums[num] = true
+				}
+			}
+			if err == nil && len(nums) > 0 {
+				return nums, nil
+			}
 		}
 	}
 }

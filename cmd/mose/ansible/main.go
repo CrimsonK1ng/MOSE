@@ -331,11 +331,15 @@ func backdoorSiteFile() {
 	}
 
 	if hostAllFound {
+		log.Println("hosts:all found")
 		if ans, err := moseutils.AskUserQuestion("Backdoor the step containing hosts:all?", a.OsTarget); ans && err == nil {
 			for i, item := range unmarshalled {
 				if strings.Compare(item.Hosts, "all") == 0 {
 
 					log.Printf("'Hosts: all' found, appending playbook to roles")
+					if unmarshalled[i].Roles == nil {
+						unmarshalled[i].Roles = make([]string, 0)
+					}
 					unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
 					writeYamlToSite(unmarshalled)
 					return
@@ -363,13 +367,23 @@ func backdoorSiteFile() {
 			log.Fatalf("Quitting...")
 		}
 	}
-	moseutils.Msg("The following hosts were found in the site.yml file %v", hosts)
-	for i, _ := range unmarshalled {
-		if ans, err := moseutils.AskUserQuestion(fmt.Sprintf("Inject the following name: %v, hosts: %v, roles: %v?", unmarshalled[i].Name, unmarshalled[i].Hosts, unmarshalled[i].Roles), a.OsTarget); ans && err == nil {
-			unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
-		} else if err != nil {
-			log.Fatalf("Quitting...")
+	moseutils.Msg("The following steps were found in the site.yml file:")
+
+	for i, hosts := range unmarshalled {
+		moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, hosts.Roles)
+	}
+
+	if ans, err := moseutils.AskUserQuestionComma("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget); err == nil {
+		for i, _ := range unmarshalled {
+			if ans[i] { // Check if current step in answer
+				if unmarshalled[i].Roles == nil {
+					unmarshalled[i].Roles = make([]string, 0)
+				}
+				unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
+			}
 		}
+	} else if err != nil {
+		log.Fatalf("Quitting...")
 	}
 	writeYamlToSite(unmarshalled)
 

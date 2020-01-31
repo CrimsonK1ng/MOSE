@@ -11,9 +11,9 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/rogpeppe/go-internal v1.5.2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
+	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d // indirect
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
-	golang.org/x/tools v0.0.0-20200125223703-d33eef8e6825 // indirect
+	golang.org/x/tools v0.0.0-20200131143746-097c1f2eed26 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
 
