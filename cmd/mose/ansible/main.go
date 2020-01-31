@@ -164,7 +164,11 @@ func getHostFileFromCfg() (bool, string) {
 			if debug {
 				log.Printf("Found inventory specified in ansible.cfg: %v", files.hostFiles)
 			}
-			return true, strings.TrimSpace(strings.SplitAfter(line, "=")[1])
+			path, err := filepath.Abs(filepath.Join(filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1])))
+			if err != nil {
+				log.Fatalf("Could not make absolute path from %v, %v", filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1]))
+			}
+			return true, path
 		}
 	}
 	return false, ""
@@ -374,7 +378,7 @@ func backdoorSiteFile() {
 		moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, hosts.Roles)
 	}
 
-	if ans, err := moseutils.AskUserQuestionComma("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget); err == nil {
+	if ans, err := moseutils.AskUserQuestionCommaIndex("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget); err == nil {
 		for i, _ := range unmarshalled {
 			if ans[i] { // Check if current step in answer
 				if unmarshalled[i].Roles == nil {

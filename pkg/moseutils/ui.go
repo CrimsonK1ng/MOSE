@@ -39,7 +39,7 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 	}
 }
 
-func AskUserQuestionComma(question string, osTarget string) (map[int]bool, error) {
+func AskUserQuestionCommaIndex(question string, osTarget string) (map[int]bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		var err error
@@ -60,6 +60,9 @@ func AskUserQuestionComma(question string, osTarget string) (map[int]bool, error
 				if e != nil {
 					fmt.Println("Number provided is not an integer, ...")
 					err = e
+				} else if num >= len(strnums) || num < 0 {
+					fmt.Printf("Number is not within range of 0 - %d", len(strnums))
+					err = errors.New("Number is not within index")
 				} else {
 					nums[num] = true
 				}
