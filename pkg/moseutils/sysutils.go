@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -118,4 +120,26 @@ func FindFile(fileName string, dirs []string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+//Check prefixes of path that normal filepath package won't expand inherantly
+// if it matches any prefix $HOME, ~/, / then we need to treat them seperately
+func CreateFilePath(text string, baseDir string) (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	path := usr.HomeDir
+	if filepath.HasPrefix(text, "~/") || filepath.HasPrefix(text, "$HOME") {
+		path = filepath.Join(path, text[2:])
+	} else if filepath.HasPrefix(text, "/") {
+		path = text
+	} else {
+		path, err = filepath.Abs(filepath.Join(baseDir, text))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return path, nil
 }

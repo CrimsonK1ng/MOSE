@@ -166,9 +166,10 @@ func getHostFileFromCfg() (bool, string) {
 			if debug {
 				log.Printf("Found inventory specified in ansible.cfg: %v", files.cfgFile)
 			}
-			path, err := filepath.Abs(filepath.Join(filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1])))
+			inventoryPath := strings.TrimSpace(strings.SplitAfter(line, "=")[1])
+			path, err := moseutils.CreateFilePath(inventoryPath, filepath.Dir(files.cfgFile))
 			if err != nil {
-				log.Fatalf("Could not make absolute path from %v, %v", filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1]))
+				log.Printf("Unable to generate correct path from input: %v %v", inventoryPath, filepath.Dir(files.cfgFile))
 			}
 			return true, path
 		}
@@ -462,7 +463,7 @@ func findVaultSecrets() {
 						file)
 
 					if err != nil {
-						log.Printf("Error running command: %s view %s %s %v", fileLoc, envFile, file, err)
+						log.Printf("Error running command: %s view --vault-password-file %s %s %v", fileLoc, envFile, file, err)
 					}
 					if !strings.Contains(res, "ERROR!") {
 						moseutils.Msg("%s", res)
@@ -484,9 +485,10 @@ func getVaultPassFromCfg() (bool, string) {
 			if debug {
 				log.Printf("Found vault_password_file specified in ansible.cfg: %v", files.cfgFile)
 			}
-			path, err := filepath.Abs(filepath.Join(filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1])))
+			vaultPath := strings.TrimSpace(strings.SplitAfter(line, "=")[1])
+			path, err := moseutils.CreateFilePath(vaultPath, filepath.Dir(files.cfgFile))
 			if err != nil {
-				log.Fatalf("Could not make absolute path from %v, %v", filepath.Dir(files.cfgFile), strings.TrimSpace(strings.SplitAfter(line, "=")[1]))
+				log.Printf("Unable to generate correct path from input: %v %v", vaultPath, filepath.Dir(files.cfgFile))
 			}
 			return true, path
 		}
