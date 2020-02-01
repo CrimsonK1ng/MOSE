@@ -109,7 +109,7 @@ func FindFiles(locations []string, extensionList []string, fileNames []string, d
 func FindFile(fileName string, dirs []string) (bool, string) {
 	fileList, _ := GetFileAndDirList(dirs)
 	for _, file := range fileList {
-		fileReg := `\b` + fileName + `$\b`
+		fileReg := `/` + fileName + `$`
 		m, err := regexp.MatchString(fileReg, file)
 		if err != nil {
 			log.Fatalf("We had an issue locating the %v file: %v\n", fileReg, err)
@@ -125,13 +125,14 @@ func FindFile(fileName string, dirs []string) (bool, string) {
 //Check prefixes of path that normal filepath package won't expand inherantly
 // if it matches any prefix $HOME, ~/, / then we need to treat them seperately
 func CreateFilePath(text string, baseDir string) (string, error) {
-	usr, err := user.Current()
+	var path string
+	_, err := user.Current()
 	if err != nil {
 		return "", err
 	}
-	path := usr.HomeDir
 	if filepath.HasPrefix(text, "~/") || filepath.HasPrefix(text, "$HOME") {
-		path = filepath.Join(path, text[2:])
+		path = filepath.Base(text)
+		_, path = FindFile(path, []string{"/root", "/home"})
 	} else if filepath.HasPrefix(text, "/") {
 		path = text
 	} else {

