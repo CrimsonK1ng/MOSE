@@ -4,6 +4,7 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/gobuffalo/envy v1.9.0 // indirect
 	github.com/gobuffalo/packd v1.0.0 // indirect
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1
