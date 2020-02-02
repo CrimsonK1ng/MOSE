@@ -522,7 +522,7 @@ func main() {
 		doCleanup(files.siteFile)
 	}
 
-	if uploadFilePath != "" {
+	if uploadFileName != "" {
 		moseutils.CpFile(uploadFileName, uploadFilePath)
 		_, err := moseutils.TrackChanges(cleanupFile, uploadFileName)
 
