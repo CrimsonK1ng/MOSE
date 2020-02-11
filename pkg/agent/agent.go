@@ -6,7 +6,6 @@ package agent
 
 // Agent holds the parameters that can be used by a payload
 type Agent struct {
-	AnsibleBackupLoc     string
 	Cmd                  string
 	Debug                bool
 	LocalIP              string
@@ -18,5 +17,4 @@ type Agent struct {
 	RemoteUploadFilePath string
 	CleanupFile          string
 	PuppetBackupLoc      string
-	SaltBackupLoc        string
 }

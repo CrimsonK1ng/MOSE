@@ -15,10 +15,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/CrimsonK1ng/mose/pkg/chefutils"
-	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/chefutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 var (
@@ -27,6 +27,8 @@ var (
 )
 
 func generateParams() {
+	var origFileUpload string
+
 	paramLoc := filepath.Join("templates", UserInput.CMTarget)
 	box := packr.New("Params", "|")
 	box.ResolutionDir = paramLoc
@@ -49,7 +51,11 @@ func generateParams() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
+	// Temporarily set UserInput.FileUpload to the name of the file uploaded to avoid pathing issues in the payload
+	if UserInput.FileUpload != "" {
+		origFileUpload = UserInput.FileUpload
+		UserInput.FileUpload = filepath.Base(UserInput.FileUpload)
+	}
 	err = t.Execute(f, UserInput)
 
 	f.Close()
@@ -78,13 +84,18 @@ func generateParams() {
 	if !UserInput.ServeSSL && UserInput.WebSrvPort == 443 {
 		UserInput.WebSrvPort = 8090
 	}
+
+	// Put it back
+	if UserInput.FileUpload != "" {
+		UserInput.FileUpload = origFileUpload
+	}
 }
 
 func generatePayload() {
 	if UserInput.Cmd != "" {
 		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.Cmd, strings.ToLower(UserInput.OSTarget))
 	} else {
-		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, UserInput.FileUpload, strings.ToLower(UserInput.OSTarget))
+		moseutils.Msg("Generating %s payload to run %s on a %s system, please wait...", UserInput.CMTarget, filepath.Base(UserInput.FileUpload), strings.ToLower(UserInput.OSTarget))
 	}
 
 	prevDir := utils.Gwd()
@@ -100,9 +111,12 @@ func generatePayload() {
 		}
 	}
 
-	if UserInput.FileUpload != "" && UserInput.FilePath == "" {
-		log.Printf("File Upload specified, copying file to payloads directory.")
-		moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
+	// If FileUpload is specified, we need to copy it into place
+	if UserInput.FileUpload != "" {
+		err := moseutils.CpFile(UserInput.FileUpload, filepath.Join("../../../payloads", filepath.Base(UserInput.FileUpload)))
+		if err != nil {
+			log.Fatalf("Failed to copy input file upload (%v): %v, exiting", UserInput.FileUpload, err)
+		}
 	}
 
 	if UserInput.FilePath != "" {
@@ -114,7 +128,7 @@ func generatePayload() {
 
 	if UserInput.Debug {
 		log.Printf("Current directory: %s", utils.Gwd())
-		log.Printf("Command to generate the payload: env GOOS=" + strings.ToLower(UserInput.OSTarget) + " GOARCH=amd64" + " go" + " build" + " -o " + payload)
+		log.Printf("env GOOS=" + strings.ToLower(UserInput.OSTarget) + " GOARCH=amd64" + " go" + " build" + " -o " + payload)
 	}
 	if err != nil {
 		log.Fatalf("Error running the command to generate the target payload: %v", err)
@@ -162,10 +176,8 @@ func main() {
 
 	// Output to the payloads directory if -f is specified
 	if UserInput.FileUpload != "" {
-		if UserInput.FilePath == "" {
-			UserInput.FilePath = filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
-		}
-		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), UserInput.FilePath}
+		targetBin := filepath.Join("payloads", UserInput.CMTarget+"-"+strings.ToLower(UserInput.OSTarget))
+		files := []string{filepath.Join("payloads", filepath.Base(UserInput.FileUpload)), targetBin}
 		moseutils.Info("Compressing files %v into payloads/files.tar", files)
 		moseutils.TarFiles(files, "payloads/files.tar")
 	}

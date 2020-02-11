@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"io"
 	"io/ioutil"
 	"log"
@@ -25,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gobuffalo/packr/v2"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 	"github.com/mholt/archiver"
 )
 

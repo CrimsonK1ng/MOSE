@@ -34,7 +34,6 @@ type UserInput struct {
 	TimeToServe          int
 
 	// Settings
-	AnsibleBackupLoc    string
 	ChefClientKey       string
 	ChefNodeName        string
 	ChefValidationKey   string
@@ -43,7 +42,6 @@ type UserInput struct {
 	ImageName           string
 	PuppetBackupLoc     string
 	RemoteHost          string
-	SaltBackupLoc       string
 	SSLCertPath         string
 	SSLKeyPath          string
 	TargetChefServer    string
@@ -85,16 +83,8 @@ func processInput() {
 	if Cli.Rhost == "" {
 		Cli.Rhost = JSONSettings.RemoteHost
 	}
-	//Generate full path from relative path if absolute path is not given
-	path, err := filepath.Abs(Cli.FilePath)
-
-	if err != nil {
-		log.Fatalf("Error generating absolute path from %s", Cli.FilePath)
-	}
-	Cli.FilePath = path
-
 	if Cli.FileUpload != "" {
-		Cli.FileUpload = filepath.Base(Cli.FileUpload)
+		Cli.FileUpload, _ = filepath.Abs(Cli.FileUpload)
 	}
 	if Cli.Debug {
 		log.Print("JSON configuration loaded with the following values")
@@ -110,7 +100,6 @@ func processInput() {
 func GetUserInput() UserInput {
 	processInput()
 	var UserInput = UserInput{
-		AnsibleBackupLoc:     JSONSettings.AnsibleBackupLoc,
 		ChefClientKey:        JSONSettings.ChefClientKey,
 		ChefNodeName:         JSONSettings.ChefNodeName,
 		ChefValidationKey:    JSONSettings.ChefValidationKey,
@@ -130,7 +119,6 @@ func GetUserInput() UserInput {
 		PuppetBackupLoc:      JSONSettings.PuppetBackupLoc,
 		RemoteUploadFilePath: Cli.RemoteUploadFilePath,
 		Rhost:                Cli.Rhost,
-		SaltBackupLoc:        JSONSettings.SaltBackupLoc,
 		SettingsPath:         Cli.SettingsPath,
 		ServeSSL:             Cli.ServeSSL,
 		SSLCertPath:          JSONSettings.SSLCertPath,

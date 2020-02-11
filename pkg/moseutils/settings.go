@@ -12,7 +12,6 @@ import (
 
 // Settings represents the configuration information found in settings.json
 type Settings struct {
-	AnsibleBackupLoc    string
 	ChefClientKey       string
 	ChefNodeName        string
 	ChefValidationKey   string
@@ -23,7 +22,6 @@ type Settings struct {
 	RemoteHost          string
 	SSLCertPath         string
 	SSLKeyPath          string
-	SaltBackupLoc       string
 	TargetChefServer    string
 	TargetOrgName       string
 	TargetValidatorName string

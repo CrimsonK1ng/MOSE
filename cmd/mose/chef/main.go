@@ -11,10 +11,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/CrimsonK1ng/mose/pkg/chefutils"
-	"github.com/CrimsonK1ng/mose/pkg/moseutils"
-	"github.com/gobuffalo/packr/v2"
-	utils "github.com/l50/goutils"
 	"io"
 	"log"
 	"mime/multipart"
@@ -26,6 +22,11 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/gobuffalo/packr/v2"
+	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/chefutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 // Command holds information used to run commands on a target chef system
@@ -193,7 +194,8 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 			moseutils.Msg("Successfully created files directory at location %s for file %s", filesLoc, uploadFileName)
 
 			// Maybe assume it isn't in current directory?
-			moseutils.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+			_ = moseutils.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+
 			_, err = moseutils.TrackChanges(cleanupFile, uploadFilePath)
 
 			if err != nil {

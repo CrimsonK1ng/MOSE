@@ -90,24 +90,6 @@ func File2lines(filePath string) ([]string, error) {
 	return LinesFromReader(f)
 }
 
-// ReadBytesFromFile returns all data from file as byte array
-func ReadBytesFromFile(filePath string) ([]byte, error) {
-	b, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// WriteFile writes a byte array to the file designated by filePath with the permissions provided by perm
-func WriteFile(filePath string, data []byte, perm os.FileMode) error {
-	err := ioutil.WriteFile(filePath, data, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // InsertStringToFile with insert a string (str) into the n-th line (index) of a specified file (path)
 // Resource: https://siongui.github.io/2017/01/30/go-insert-line-or-string-to-file/
 func InsertStringToFile(path, str string, index int) error {
