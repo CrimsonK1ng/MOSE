@@ -10,6 +10,7 @@
 	"remoteHost" : "",
 	"sslCertPath": "data/mose.crt",
 	"sslKeyPath" : "data/mose.key",
+	"saltBackupLoc" : "",
 	"targetChefServer" : "chef-server",
 	"targetOrgName": "my_org",
 	"targetValidatorName" : "my_org-validator",

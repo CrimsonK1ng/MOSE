@@ -18,4 +18,5 @@ type Agent struct {
 	RemoteUploadFilePath string
 	CleanupFile          string
 	PuppetBackupLoc      string
+	SaltBackupLoc        string
 }

