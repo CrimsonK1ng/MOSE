@@ -17,23 +17,25 @@ fmt: ## gofmt and goimports all go files
 
 lint: ## Run all the linters
 	golangci-lint run \
-	--no-config \
-	--issues-exit-code=0 \
-	--timeout=30m \
-	--disable-all \
-	--enable=deadcode  \
-	--enable=gocyclo \
-	--enable=golint \
-	--enable=varcheck \
-	--enable=structcheck \
-	--enable=maligned \
-	--enable=dupl \
-	--enable=ineffassign \
-	--enable=interfacer \
-	--enable=unconvert \
-	--enable=goconst \
-	--enable=gosec \
-	--enable=megacheck
+		--no-config \
+		--issues-exit-code=0 \
+		--timeout=30m \
+		--disable-all \
+		--enable=deadcode \
+		--enable=gocyclo \
+		--enable=golint \
+		--enable=varcheck \
+		--enable=structcheck \
+		--enable=maligned \
+		--enable=errcheck \
+		--enable=dupl \
+		--enable=ineffassign \
+		--enable=interfacer \
+		--enable=unconvert \
+		--enable=goconst \
+		--enable=gosec \
+		--enable=megacheck 
+	markdownfmt -w README.md
 
 test:
 	go test -count=1 -v -race ./... ; \

