@@ -25,8 +25,8 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/chefutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/chefutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 )
 
 // Command holds information used to run commands on a target chef system
