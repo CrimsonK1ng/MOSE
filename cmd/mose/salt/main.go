@@ -342,22 +342,6 @@ func writeYamlToTop(topSlsYaml map[string]interface{}, fileLoc string) {
 	log.Printf("%s successfully created", fileLoc)
 }
 
-// getIndexInjects returns the key, value pairing for indexing into the unmarshalled data structure above
-// mapOfInjects is the map made during initial traversing through the generic map[string]interface{}
-// index is the index selected and validated by the method AskUserQuestionCommaIndex
-func getIndexInjects(mapOfInjects map[string]map[string]bool, index int) (string, string) {
-	for k, v := range mapOfInjects {
-		ind := 0
-		for k1, _ := range v {
-			if ind == index {
-				return k, k1
-			}
-			ind += 1
-		}
-	}
-	return "", ""
-}
-
 // getPillarSecrets tries to print out the pillar.items
 // binLoc is the path to salt binary
 func getPillarSecrets(binLoc string) {
