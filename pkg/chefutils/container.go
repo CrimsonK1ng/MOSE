@@ -23,7 +23,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/gobuffalo/packr/v2"
+	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/moseutils"
 	"github.com/mholt/archiver"
 )
@@ -334,17 +334,17 @@ func generateKnife() {
 		TargetValidatorName: userInput.TargetValidatorName,
 	}
 
-	paramLoc := filepath.Join("templates", userInput.CMTarget)
-	box := packr.New("Params", "|")
-	box.ResolutionDir = paramLoc
+	s, err := pkger.Open("cmd/mose/chef/tmpl/knife.tmpl")
 	// Build knife.rb using the knife template
-	s, err := box.FindString("knife.tmpl")
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer s.Close()
 
-	t, err := template.New("knife").Parse(s)
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	t, err := template.New("knife").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal(err)

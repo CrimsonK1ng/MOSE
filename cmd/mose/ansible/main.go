@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,8 +16,8 @@ import (
 	"text/template"
 
 	"github.com/ghodss/yaml"
-	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
@@ -296,24 +297,32 @@ func generatePlaybooks() {
 		var s string
 		createPlaybookDirs(playbookDir, ansibleCommand)
 
-		box := packr.New("Ansible", "../../../templates/ansible")
-
-		s, err := box.FindString("ansiblePlaybook.tmpl")
+		s, err := pkger.Open(filepath.Join("/tmpl", "ansiblePlaybook.tmpl"))
 
 		if err != nil {
 			log.Fatalf("Error reading the template to create a playbook: %v, exiting...", err)
 		}
 
+		defer s.Close()
+
 		if uploadFileName != "" {
-			s, err = box.FindString("ansibleFileUploadPlaybook.tmpl")
+			s, err = pkger.Open(filepath.Join("/tmpl", "ansibleFileUploadPlaybook.tmpl"))
 
 			if err != nil {
 				log.Fatalf("Error reading the file upload template to create a playbook: %v, exiting...", err)
 			}
+			defer s.Close()
+		}
+
+		dat := new(strings.Builder)
+		_, err = io.Copy(dat, s)
+
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		// Parse the template
-		t, err := template.New("ansiblePlaybook").Parse(s)
+		t, err := template.New("ansiblePlaybook").Parse(dat.String())
 
 		if err != nil {
 			log.Fatalf("Error creating the template representation of the ansible playbook: %v, exiting...", err)

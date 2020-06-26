@@ -16,8 +16,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/moseutils"
 )
 
@@ -183,18 +183,25 @@ func generateModule(moduleManifest string, cmd string) bool {
 		FilePath:  uploadFilePath,
 	}
 
-	box := packr.New("Puppet", "../../../templates/puppet")
+	s, err := pkger.Open(filepath.Join("/tmpl", "puppetModule.tmpl"))
 
-	s, err := box.FindString("puppetModule.tmpl")
 	if uploadFileName != "" {
-		s, err = box.FindString("puppetFileUploadModule.tmpl")
+		s, err := pkger.Open(filepath.Join("/tmpl", "puppetFileUploadModule.tmpl"))
 	}
 
 	if err != nil {
 		log.Fatal("Parse: ", err)
 	}
+	defer s.Close()
 
-	t, err := template.New("puppetModule").Parse(s)
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t, err := template.New("puppetModule").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal("Parse: ", err)

@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -15,8 +16,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
 )
@@ -29,18 +30,28 @@ var (
 func generateParams() {
 	var origFileUpload string
 
-	paramLoc := filepath.Join("templates", UserInput.CMTarget)
-	box := packr.New("Params", "|")
-	box.ResolutionDir = paramLoc
+	paramLoc := filepath.Join("cmd/mose", UserInput.CMTarget, "tmpl")
+	//box := pkger.New("Params", "|")
+	//box.ResolutionDir = paramLoc
+	//pkger.Include("/cmd/mose")
 
 	// Generate the params for a given target
-	s, err := box.FindString("params.tmpl")
+	//s, err := box.FindString("params.tmpl")
+	s, err := pkger.Open(filepath.Join("/", paramLoc, "params.tmpl"))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer s.Close()
+
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	t, err := template.New("params").Parse(s)
+	t, err := template.New("params").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal(err)

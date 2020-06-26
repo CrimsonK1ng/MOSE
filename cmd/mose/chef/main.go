@@ -23,8 +23,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/gobuffalo/packr/v2"
 	utils "github.com/l50/goutils"
+	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
 )
@@ -110,15 +110,22 @@ func createMetadata(absCookbookPath string) bool {
 	metadataCommand := Metadata{
 		PayloadName: cookbookName,
 	}
-	box := packr.New("Chef", "../../../templates/chef")
 
-	s, err := box.FindString("metadata.rb.tmpl")
+	s, err := pkger.Open(filepath.Join("/", "tmpl", "metadata.rb.tmpl"))
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal(err)
+	}
+	defer s.Close()
+
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	t, err := template.New("metadata").Parse(s)
+	t, err := template.New("metadata").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal("Parse: ", err)
@@ -147,18 +154,24 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 		FilePath: uploadFilePath,
 	}
 
-	box := packr.New("Chef", "../../../templates/chef")
-
-	s, err := box.FindString("chefCookbook.tmpl")
+	s, err := pkger.Open(filepath.Join("/tmpl", "chefCookbook.tmpl"))
 	if uploadFileName != "" {
-		s, err = box.FindString("chefFileCookbook.tmpl")
+		s, err = pkger.Open(filepath.Join("/tmpl", "chefFileCookbook.tmpl"))
 	}
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal(err)
+	}
+	defer s.Close()
+
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	t, err := template.New("chefCookbook").Parse(s)
+	t, err := template.New("chefCookbook").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal("Parse: ", err)
