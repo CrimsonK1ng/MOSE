@@ -112,7 +112,7 @@ func createMetadata(absCookbookPath string) bool {
 		PayloadName: cookbookName,
 	}
 
-	s, err := pkger.Open(filepath.Join("/", "tmpl", "metadata.rb.tmpl"))
+	s, err := pkger.Open("/cmd/chef/tmpl/metadata.rb.tmpl")
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -155,9 +155,9 @@ func createCookbook(cookbooksLoc string, cookbookName string, cmd string) bool {
 		FilePath: uploadFilePath,
 	}
 
-	s, err := pkger.Open(filepath.Join("/tmpl", "chefCookbook.tmpl"))
+	s, err := pkger.Open("/cmd/chef/tmpl/chefCookbook.tmpl")
 	if uploadFileName != "" {
-		s, err = pkger.Open(filepath.Join("/tmpl", "chefFileCookbook.tmpl"))
+		s, err = pkger.Open("/cmd/chef/tmpl/chefFileCookbook.tmpl")
 	}
 
 	if err != nil {

@@ -16,8 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/master-of-servers/mose/pkg/chefutils"
@@ -40,7 +38,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("chef called")
+		UserInput.ValidateInput()
 		UserInput.CMTarget = CMTARGETCHEF
 		UserInput.SetLocalIP()
 		UserInput.GenerateParams()

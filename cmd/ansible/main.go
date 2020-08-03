@@ -300,7 +300,7 @@ func generatePlaybooks() {
 		//var s string
 		createPlaybookDirs(playbookDir, ansibleCommand)
 
-		s, err := pkger.Open(filepath.Join("/tmpl", "ansiblePlaybook.tmpl"))
+		s, err := pkger.Open("/cmd/ansible/tmpl/ansiblePlaybook.tmpl")
 
 		if err != nil {
 			log.Fatal().Err(err).Msg("Error reading the template to create a playbook: %v, exiting...")
@@ -309,7 +309,7 @@ func generatePlaybooks() {
 		defer s.Close()
 
 		if uploadFileName != "" {
-			s, err = pkger.Open(filepath.Join("/tmpl", "ansibleFileUploadPlaybook.tmpl"))
+			s, err = pkger.Open("/cmd/ansible/tmpl/ansibleFileUploadPlaybook.tmpl")
 
 			if err != nil {
 				log.Fatal().Err(err).Msg("Error reading the file upload template to create a playbook, exiting...")

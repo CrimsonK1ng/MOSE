@@ -16,7 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"github.com/master-of-servers/mose/pkg/system"
 	"github.com/master-of-servers/mose/pkg/userinput"
 	"os"
@@ -51,15 +50,6 @@ to quickly create a Cobra application.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	//if UserInput.Cmd == "" && UserInput.FileUpload == "" {
-	//logging.ErrMsg("You must specify a CM target and a command or file to upload.")
-	//logging.ErrMsg("Example: mose -t puppet -c pwd")
-	//}
-
-	// if UserInput.Cmd != "" && UserInput.FileUpload != "" {
-	// 	logging.ErrMsg("You must specify a CM target, a command or file to upload, and an operating system.")
-	// 	logging.ErrMsg("Example: mose -t chef -fu evil.sh")
-	// }
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if UserInput.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -128,7 +118,7 @@ func initConfig() {
 		// Find current directory.
 		cur, err := os.Getwd()
 		if err != nil {
-			fmt.Println(err)
+			log.Error().Err(err).Msg("")
 			os.Exit(1)
 		}
 
@@ -151,5 +141,5 @@ func initConfig() {
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling config file")
 	}
-	viper.Debug()
+	//viper.Debug()
 }

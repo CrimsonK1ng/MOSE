@@ -182,10 +182,10 @@ func generateModule(moduleManifest string, cmd string) bool {
 		FilePath:  uploadFilePath,
 	}
 
-	s, err := pkger.Open(filepath.Join("/tmpl", "puppetModule.tmpl"))
+	s, err := pkger.Open("/cmd/puppet/tmpl/puppetModule.tmpl")
 
 	if uploadFileName != "" {
-		s, err = pkger.Open(filepath.Join("/tmpl", "puppetFileUploadModule.tmpl"))
+		s, err = pkger.Open("/cmd/puppet/tmpl/puppetFileUploadModule.tmpl")
 	}
 
 	if err != nil {

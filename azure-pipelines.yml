@@ -49,7 +49,7 @@ steps:
 # Puppet
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t puppet -f $(modulePath)/payloads/puppet-linux
+    ./mose puppet -c "touch /tmp/test.txt && echo test >> /tmp/test.txt"  -f $(modulePath)/payloads/puppet-linux
   displayName: 'Generate a puppet payload'
   workingDirectory: "$(modulePath)"
 
@@ -81,7 +81,7 @@ steps:
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu payloads/notevil.sh -t puppet -f payloads/puppet-linux
+    ./mose puppet -fu payloads/notevil.sh  -f payloads/puppet-linux
   displayName: 'Generate a puppet payload to test file upload'
   workingDirectory: "$(modulePath)"
 
@@ -171,7 +171,7 @@ steps:
 # Ansible
 - script: |
     export GO111MODULE=on
-    ./mose -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -t ansible -f $(modulePath)/payloads/ansible-linux
+    ./mose ansible -c "touch /tmp/test.txt && echo test >> /tmp/test.txt" -f $(modulePath)/payloads/ansible-linux
   displayName: 'Generate an ansible payload'
   workingDirectory: "$(modulePath)"
 
@@ -219,7 +219,7 @@ steps:
 - script: |
     echo 'echo testing file upload > /tmp/file_upload_test.txt' > payloads/notevil.sh
     export GO111MODULE=on
-    ./mose -fu payloads/notevil.sh -t ansible -f payloads/ansible-linux
+    ./mose ansible -fu payloads/notevil.sh -f payloads/ansible-linux
   displayName: 'Generate an ansible payload to test file upload'
   workingDirectory: "$(modulePath)"
 

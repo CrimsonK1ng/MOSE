@@ -2,10 +2,10 @@ package userinput
 
 import (
 	"context"
-	"html/template"
-	"io"
 	netutils "github.com/master-of-servers/mose/pkg/netutils"
 	"github.com/master-of-servers/mose/pkg/system"
+	"html/template"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -254,5 +254,15 @@ func (i *UserInput) ServePayload() {
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Fatal().Err(err).Msg("")
+	}
+}
+
+func (i *UserInput) ValidateInput() {
+	if i.Cmd == "" && i.FileUpload == "" {
+		log.Fatal().Msg("You must specify a CM target and a command or file to upload.")
+	}
+
+	if i.Cmd != "" && i.FileUpload != "" {
+		log.Fatal().Msg("You must specify a CM target, a command or file to upload, and an operating system.")
 	}
 }
