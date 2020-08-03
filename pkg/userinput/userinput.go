@@ -2,10 +2,10 @@ package userinput
 
 import (
 	"context"
-	netutils "github.com/master-of-servers/mose/pkg/netutils"
-	"github.com/master-of-servers/mose/pkg/system"
 	"html/template"
 	"io"
+	netutils "mose/pkg/netutils"
+	"mose/pkg/system"
 	"os"
 	"os/exec"
 	"path"

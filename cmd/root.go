@@ -16,8 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/master-of-servers/mose/pkg/system"
-	"github.com/master-of-servers/mose/pkg/userinput"
+	"mose/pkg/system"
+	"mose/pkg/userinput"
 	"os"
 	"path/filepath"
 

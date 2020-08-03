@@ -15,8 +15,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/master-of-servers/mose/pkg/moseutils"
-	"github.com/master-of-servers/mose/pkg/system"
+	"mose/pkg/moseutils"
+	"mose/pkg/system"
 
 	"github.com/ghodss/yaml"
 	"github.com/markbates/pkger"

@@ -1,4 +1,4 @@
-module github.com/master-of-servers/mose
+module mose
 
 go 1.14
 

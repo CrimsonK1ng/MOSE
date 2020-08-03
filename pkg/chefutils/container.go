@@ -7,9 +7,9 @@ package chefutils
 import (
 	"bytes"
 	"context"
-	"github.com/master-of-servers/mose/pkg/userinput"
 	"io"
 	"io/ioutil"
+	"mose/pkg/userinput"
 	"os"
 	"os/signal"
 	"path"

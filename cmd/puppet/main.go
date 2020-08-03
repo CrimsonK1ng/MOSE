@@ -16,9 +16,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/master-of-servers/mose/pkg/moseutils"
-	"github.com/master-of-servers/mose/pkg/netutils"
-	"github.com/master-of-servers/mose/pkg/system"
+	"mose/pkg/moseutils"
+	"mose/pkg/netutils"
+	"mose/pkg/system"
 
 	"github.com/markbates/pkger"
 	"github.com/rs/zerolog"

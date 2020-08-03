@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/master-of-servers/mose/cmd"
+import "mose/cmd"
 
 func main() {
 	cmd.Execute()
