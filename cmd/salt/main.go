@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	"github.com/master-of-servers/mose/pkg/system"
 
 	"github.com/ghodss/yaml"
-	"github.com/gobuffalo/packr/v2"
+	"github.com/markbates/pkger"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -225,18 +226,24 @@ func generateState(stateFile string, cmd string, stateName string) bool {
 		StateName: stateName,
 	}
 
-	box := packr.New("Salt", "../../../templates/salt")
-
-	s, err := box.FindString("saltState.tmpl")
+	s, err := pkger.Open("/tmpl/saltState.tmpl")
 	if uploadFileName != "" {
-		s, err = box.FindString("saltFileUploadState.tmpl")
+		s, err = pkger.Open("/tmpl/saltFileUploadState.tmpl")
 	}
+	defer s.Close()
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Parse: ")
 	}
 
-	t, err := template.New("saltState").Parse(s)
+	dat := new(strings.Builder)
+	_, err = io.Copy(dat, s)
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	t, err := template.New("saltState").Parse(dat.String())
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Parse: ")

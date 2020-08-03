@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -213,11 +214,19 @@ func (i *UserInput) GeneratePayload() {
 		system.CpFile(i.FileUpload, filepath.Join(i.PayloadDirectory, filepath.Base(i.FileUpload)))
 	}
 
-	_, err := system.RunCommand("env", "GOOS="+strings.ToLower(i.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
+	//_, err := system.RunCommand("env", "GOOS="+strings.ToLower(i.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
 	//commandString := fmt.Sprintf("GOOS=%s GOARCH=amd64 go build -o %s %s %s", strings.ToLower(i.OSTarget), payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
 	//_, err := utils.RunCommand("env", commandString)
+	cmd := exec.Command("pkger")
+	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget)
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error running the command to generate the target payload")
+	}
 
-	log.Debug().Msgf("Current directory: %s", system.Gwd())
+	cmd = exec.Command("env", "GOOS="+strings.ToLower(i.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload)
+	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget)
+	err = cmd.Run()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error running the command to generate the target payload")
 	}

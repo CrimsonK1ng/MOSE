@@ -1,7 +1,7 @@
 // Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 // Under the terms of Contract DE-NA0003525 with NTESS,
 // the U.S. Government retains certain rights in this software.
-
+//go:generate pkger
 package main
 
 import (
@@ -181,15 +181,14 @@ func generateModule(moduleManifest string, cmd string) bool {
 		FileName:  uploadFileName,
 		FilePath:  uploadFilePath,
 	}
-
-	s, err := pkger.Open("/cmd/puppet/tmpl/puppetModule.tmpl")
+	s, err := pkger.Open("/tmpl/puppetModule.tmpl")
 
 	if uploadFileName != "" {
-		s, err = pkger.Open("/cmd/puppet/tmpl/puppetFileUploadModule.tmpl")
+		s, err = pkger.Open("/tmpl/puppetFileUploadModule.tmpl")
 	}
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Parse: ")
+		log.Fatal().Err(err).Msg("Parse failure pkger: ")
 	}
 	defer s.Close()
 
@@ -203,7 +202,8 @@ func generateModule(moduleManifest string, cmd string) bool {
 	t, err := template.New("puppetModule").Parse(dat.String())
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Parse: ")
+		log.Debug().Msg(dat.String())
+		log.Fatal().Err(err).Msg("Parse failure template: ")
 	}
 
 	f, err := os.Create(moduleManifest)
