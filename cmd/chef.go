@@ -18,8 +18,8 @@ package cmd
 import (
 	"github.com/rs/zerolog/log"
 
-	"mose/pkg/chefutils"
-	"mose/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/chefutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 	"os"
 
 	"github.com/spf13/cobra"

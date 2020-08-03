@@ -4,8 +4,8 @@ import (
 	"context"
 	"html/template"
 	"io"
-	netutils "mose/pkg/netutils"
-	"mose/pkg/system"
+	netutils "github.com/CrimsonK1ng/mose/pkg/netutils"
+	"github.com/CrimsonK1ng/mose/pkg/system"
 	"os"
 	"os/exec"
 	"path"
@@ -179,7 +179,7 @@ func (i *UserInput) GeneratePayload() {
 	}
 
 	//prevDir := utils.Gwd()
-	//moseutils.Cd(filepath.Clean(filepath.Join("cmd/mose/", CMTarget)))
+	//moseutils.Cd(filepath.Clean(filepath.Join("cmd/github.com/CrimsonK1ng/mose/", CMTarget)))
 
 	_ = os.Mkdir(i.PayloadDirectory, 0755)
 

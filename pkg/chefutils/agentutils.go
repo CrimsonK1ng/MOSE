@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"mose/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
 
 	"github.com/rs/zerolog/log"
 )

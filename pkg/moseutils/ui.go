@@ -44,7 +44,7 @@ func AskUserQuestion(question string, osTarget string) (bool, error) {
 // The input must be a number, which correspond to an index of an answer.
 // The operating system must be specified as an input in order to handle the line ending properly;
 // Windows uses a different line ending scheme than Unix systems
-// pp is used to pass in an anonymous function for pretty printing - see validateIndicies() in cmd/mose/ansible/main.go for an example
+// pp is used to pass in an anonymous function for pretty printing - see validateIndicies() in cmd/github.com/CrimsonK1ng/mose/ansible/main.go for an example
 // Loosely based on https://tutorialedge.net/golang/reading-console-input-golang/
 func IndexedUserQuestion(question string, osTarget string, validIndices map[int]bool, pp func()) (map[int]bool, error) {
 	reader := bufio.NewReader(os.Stdin)

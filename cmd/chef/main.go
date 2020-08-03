@@ -21,9 +21,9 @@ import (
 	"text/template"
 	"time"
 
-	"mose/pkg/chefutils"
-	"mose/pkg/moseutils"
-	"mose/pkg/system"
+	"github.com/CrimsonK1ng/mose/pkg/chefutils"
+	"github.com/CrimsonK1ng/mose/pkg/moseutils"
+	"github.com/CrimsonK1ng/mose/pkg/system"
 
 	"github.com/markbates/pkger"
 	"github.com/rs/zerolog"

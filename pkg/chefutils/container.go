@@ -9,7 +9,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"mose/pkg/userinput"
+	"github.com/CrimsonK1ng/mose/pkg/userinput"
 	"os"
 	"os/signal"
 	"path"
@@ -332,7 +332,7 @@ func generateKnife() {
 		TargetValidatorName: userInput.TargetValidatorName,
 	}
 
-	s, err := pkger.Open("cmd/mose/chef/tmpl/knife.tmpl")
+	s, err := pkger.Open("cmd/github.com/CrimsonK1ng/mose/chef/tmpl/knife.tmpl")
 	// Build knife.rb using the knife template
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
