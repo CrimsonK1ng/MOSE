@@ -1,4 +1,4 @@
-module mose
+module github.com/CrimsonK1ng/mose
 
 go 1.14
 
