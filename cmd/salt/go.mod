@@ -1,7 +1,5 @@
 module salt
 
-replace github.com/master-of-servers/mose => /home/lex/Documents/dev/mose
-
 go 1.14
 
 require (

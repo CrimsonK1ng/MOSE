@@ -37,9 +37,8 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    go get -u github.com/gobuffalo/packr/v2/packr2
+    go get github.com/markbates/pkger/cmd/pkger
     export GO111MODULE=on
-    packr2 build
     go get
     go build
     mkdir -p payloads

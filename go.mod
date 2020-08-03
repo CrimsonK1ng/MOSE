@@ -46,7 +46,3 @@ require (
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
 )
-
-replace github.com/docker/docker => github.com/docker/engine v0.0.0-20190423201726-d2cfbce3f3b0
-
-replace github.com/master-of-servers/mose => /home/lex/Documents/dev/mose

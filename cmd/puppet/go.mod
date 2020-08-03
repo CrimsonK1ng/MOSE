@@ -7,5 +7,3 @@ require (
 	github.com/master-of-servers/mose v1.2.5
 	github.com/rs/zerolog v1.19.0
 )
-
-replace github.com/master-of-servers/mose => /home/lex/Documents/dev/mose
