@@ -44,16 +44,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-
-		log.Log().Msgf("Log level %v", UserInput.Debug)
-		if UserInput.Debug {
-			zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		} else {
-			zerolog.SetGlobalLevel(zerolog.InfoLevel)
-
-		}
-	},
+	//Run: func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -136,7 +127,7 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Error().Err(err).Msg("Error reading in config file")
 	}
-	log.Debug().Msgf("Using config file:", viper.ConfigFileUsed())
+	//log.Debug().Msgf("Using config file:", viper.ConfigFileUsed())
 
 	err := viper.Unmarshal(&UserInput)
 
@@ -157,4 +148,5 @@ func initConfig() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Log().Msgf("UI %v", UserInput)
 }
