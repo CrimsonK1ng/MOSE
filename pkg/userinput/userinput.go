@@ -2,10 +2,10 @@ package userinput
 
 import (
 	"context"
-	"html/template"
-	"io"
 	netutils "github.com/CrimsonK1ng/mose/pkg/netutils"
 	"github.com/CrimsonK1ng/mose/pkg/system"
+	"html/template"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -79,9 +79,7 @@ func (i *UserInput) StartTakeover() {
 		if err != nil {
 			log.Error().Err(err).Msg("Error generating archive file")
 		}
-		if i.Debug {
-			log.Printf("Archive file created at %s", loc)
-		}
+		log.Debug().Msgf("Archive file created at %s", loc)
 	}
 
 	// If the user hasn't specified to output the payload to a file, then serve it
@@ -93,7 +91,7 @@ func (i *UserInput) StartTakeover() {
 func (i *UserInput) GenerateParams() {
 	var origFileUpload string
 
-	paramLoc := filepath.Join(i.BaseDir, "cmd/", i.CMTarget, "tmpl")
+	paramLoc := filepath.Join(i.BaseDir, "cmd/", i.CMTarget, "main/tmpl")
 	//paramLoc := filepath.Join(CMTarget, "tmpl")
 	//box := pkger.New("Params", "|")
 	//box.ResolutionDir = paramLoc
@@ -121,7 +119,7 @@ func (i *UserInput) GenerateParams() {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	f, err := os.Create(filepath.Join(i.BaseDir, "/cmd/", i.CMTarget, "/params.go"))
+	f, err := os.Create(filepath.Join(i.BaseDir, "/cmd/", i.CMTarget, "main/params.go"))
 	// f, err := os.Create(CMTarget + "/params.go")
 
 	if err != nil {
@@ -185,13 +183,11 @@ func (i *UserInput) GeneratePayload() {
 
 	payload := filepath.Join(i.PayloadDirectory, i.CMTarget+"-"+strings.ToLower(i.OSTarget))
 
-	if i.Debug {
-		log.Printf("Payload output name = %s", filepath.Base(payload))
-		log.Printf("CM Target = %s", i.CMTarget)
-		log.Printf("OS Target = %s", i.OSTarget)
-		if i.FileUpload != "" {
-			log.Printf("File to upload and run = %s", i.FileUpload)
-		}
+	log.Debug().Msgf("Payload output name = %s", filepath.Base(payload))
+	log.Debug().Msgf("CM Target = %s", i.CMTarget)
+	log.Debug().Msgf("OS Target = %s", i.OSTarget)
+	if i.FileUpload != "" {
+		log.Debug().Msgf("File to upload and run = %s", i.FileUpload)
 	}
 
 	// If FileUpload is specified, we need to copy it into place
@@ -206,6 +202,9 @@ func (i *UserInput) GeneratePayload() {
 	if i.FilePath != "" && i.FileUpload == "" {
 		log.Info().Msgf("Creating binary at: " + i.FilePath)
 		payload = i.FilePath
+		if !filepath.IsAbs(i.FilePath) {
+			payload = filepath.Join(i.BaseDir, i.FilePath)
+		}
 	}
 
 	// FilePath used as tar output location in conjunction with FileUpload
@@ -218,14 +217,15 @@ func (i *UserInput) GeneratePayload() {
 	//commandString := fmt.Sprintf("GOOS=%s GOARCH=amd64 go build -o %s %s %s", strings.ToLower(i.OSTarget), payload, filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main.go"), filepath.Join(i.BaseDir, "cmd", i.CMTarget, "params.go"))
 	//_, err := utils.RunCommand("env", commandString)
 	cmd := exec.Command("pkger")
-	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget)
+	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main")
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error running the command to generate the target payload")
 	}
 
 	cmd = exec.Command("env", "GOOS="+strings.ToLower(i.OSTarget), "GOARCH=amd64", "go", "build", "-o", payload)
-	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget)
+	log.Debug().Msgf("env GOOS=%s GOARCH=amd64 go build -o %s", strings.ToLower(i.OSTarget), payload)
+	cmd.Dir = filepath.Join(i.BaseDir, "cmd", i.CMTarget, "main")
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error running the command to generate the target payload")
@@ -263,15 +263,5 @@ func (i *UserInput) ServePayload() {
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Fatal().Err(err).Msg("")
-	}
-}
-
-func (i *UserInput) ValidateInput() {
-	if i.Cmd == "" && i.FileUpload == "" {
-		log.Fatal().Msg("You must specify a CM target and a command or file to upload.")
-	}
-
-	if i.Cmd != "" && i.FileUpload != "" {
-		log.Fatal().Msg("You must specify a CM target, a command or file to upload, and an operating system.")
 	}
 }

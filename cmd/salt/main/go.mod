@@ -1,4 +1,4 @@
-module salt
+module main
 
 go 1.14
 

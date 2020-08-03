@@ -44,20 +44,22 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+
+		log.Log().Msgf("Log level %v", UserInput.Debug)
+		if UserInput.Debug {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if UserInput.Debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	if err := rootCmd.Execute(); err != nil {
-
-		log.Debug().Msg("UH")
 		os.Exit(1)
 	}
 }
@@ -138,8 +140,21 @@ func initConfig() {
 
 	err := viper.Unmarshal(&UserInput)
 
+	if UserInput.Cmd == "" && UserInput.FileUpload == "" {
+		log.Fatal().Msg("You must specify a CM target and a command or file to upload.")
+	}
+
+	if UserInput.Cmd != "" && UserInput.FileUpload != "" {
+		log.Fatal().Msg("You must specify a CM target, a command or file to upload, and an operating system.")
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling config file")
 	}
-	//viper.Debug()
+
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if UserInput.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }

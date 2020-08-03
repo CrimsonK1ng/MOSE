@@ -1,4 +1,4 @@
-package main
+package  main
 
 import (
 	"github.com/CrimsonK1ng/mose/pkg/agent"
@@ -14,7 +14,7 @@ func CreateAgent() agent.Agent {
 		FileName:   "{{.FileUpload}}",
 		RemoteUploadFilePath: "{{.RemoteUploadFilePath}}",
 		CleanupFile: "{{.CleanupFile}}",
-		SaltBackupLoc: "{{.SaltBackupLoc}}",
+		PuppetBackupLoc: "{{.PuppetBackupLoc}}",
 	}
 	return agent
 }
